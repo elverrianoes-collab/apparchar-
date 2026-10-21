@@ -171,8 +171,10 @@ tags:
   - name: Órdenes
     description: |-
       Compras sin cuenta: se crean `pendiente`, reservan cupo 15 minutos y pasan a `pagada` cuando la
-      pasarela confirma el pago. No se editan ni se borran: son registro contable; los reembolsos los hace
-      el sistema al cancelar el evento.
+      pasarela confirma el pago. CRUD completo con el enlace privado de la compra: mientras está
+      `pendiente`, el comprador corrige sus datos (`actualizarOrden`) o la anula y libera el cupo
+      (`eliminarOrden`). Una orden pagada ya no se edita ni se borra: es registro contable, y los
+      reembolsos los hace el sistema al cancelar el evento (D-26).
   - name: Boletas
     description: |-
       Entradas individuales con QR, una por unidad pagada. Las emite el servidor; por eso no hay POST,
@@ -205,6 +207,11 @@ paths:
             schema:
               $ref: '#/components/schemas/Credenciales'
             examples:
+              demo:
+                summary: Organizador de los datos de demostración (npm run demo)
+                value:
+                  correo: demo@apparchar.co
+                  clave: Apparchar2026
               sabana_rock:
                 summary: Inicio de sesión del Colectivo Sabana Rock
                 value:
@@ -2621,6 +2628,154 @@ paths:
                   value:
                     codigo: orden_no_encontrada
                     mensaje: No encontramos esa orden. Revisa el enlace del correo de compra.
+    patch:
+      operationId: actualizarOrden
+      tags:
+        - Órdenes
+      summary: Corregir los datos de una orden pendiente
+      description: |-
+        El comprador corrige sus datos mientras la orden está `pendiente` (antes de pagar): nombre, correo,
+        celular, cédula o medio de pago. Es pública por la misma razón que `obtenerOrden`: el UUID de la
+        orden es el enlace privado de la compra. Los ítems y el total no cambian; para comprar otra cosa se
+        anula la orden con `eliminarOrden` y se crea otra.
+
+        409, porque el estado actual lo impide: la orden ya está pagada o reembolsada
+        (`orden_no_pendiente`) o pasaron los 15 minutos de la reserva (`orden_expirada`).
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/orden_id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrdenCambios'
+            examples:
+              correo_y_medio_de_pago:
+                summary: Edwin corrige su correo y prefiere pagar con Nequi
+                value:
+                  comprador_correo: edwin.pidiache@example.com
+                  medio_pago: nequi
+      responses:
+        '200':
+          description: Orden actualizada; sigue `pendiente` con el mismo `expira_en`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Orden'
+              examples:
+                pendiente:
+                  $ref: '#/components/examples/OrdenEdwinPendiente'
+        '400':
+          description: |-
+            La petición no cumple el esquema (JSON mal formado, tipo equivocado, obligatorio faltante, valor
+            fuera de rango o del dominio, parámetro inválido) o se contradice a sí misma. Se detecta sin
+            consultar la base.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                cuerpo_vacio:
+                  summary: No se envió ningún cambio
+                  value:
+                    codigo: solicitud_invalida
+                    mensaje: La solicitud tiene datos inválidos.
+                    detalles:
+                      - campo: (cuerpo)
+                        problema: Debe traer al menos 1 campo(s).
+        '404':
+          description: No existe el recurso pedido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                orden_no_encontrada:
+                  summary: El id no corresponde a ninguna orden
+                  value:
+                    codigo: orden_no_encontrada
+                    mensaje: No encontramos esa orden. Revisa el enlace del correo de compra.
+        '409':
+          description: La orden ya no está pendiente o pasó el tiempo de la reserva.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                orden_no_pendiente:
+                  summary: La orden ya está pagada
+                  value:
+                    codigo: orden_no_pendiente
+                    mensaje: La orden ya está pagada; una orden pagada no se modifica.
+                orden_expirada:
+                  summary: Pasaron los 15 minutos de la reserva
+                  value:
+                    codigo: orden_expirada
+                    mensaje: La orden expiró el 29 de septiembre, 7:05 p. m. y liberó su cupo; hay que comprar de nuevo.
+    delete:
+      operationId: eliminarOrden
+      tags:
+        - Órdenes
+      summary: Anular una orden pendiente
+      description: |-
+        El comprador abandona la compra antes de pagar: la orden `pendiente` se borra con sus ítems y el
+        cupo que reservaba vuelve a estar disponible en ese momento (sin esperar los 15 minutos). Si el
+        evento estaba `agotado`, vuelve a `publicado`. Es pública por la misma razón que `obtenerOrden`.
+        Una orden pagada no se borra (`orden_no_pendiente`): es registro contable.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/orden_id'
+      responses:
+        '204':
+          description: Orden anulada y cupo liberado. Sin cuerpo.
+        '400':
+          description: |-
+            La petición no cumple el esquema (JSON mal formado, tipo equivocado, obligatorio faltante, valor
+            fuera de rango o del dominio, parámetro inválido) o se contradice a sí misma. Se detecta sin
+            consultar la base.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                id_invalido:
+                  summary: El identificador no es un UUID
+                  value:
+                    codigo: solicitud_invalida
+                    mensaje: La solicitud tiene datos inválidos.
+                    detalles:
+                      - campo: orden_id
+                        problema: Debe ser un UUID, por ejemplo 29f5422e-4b0e-4ff2-a6d7-eab5062461cb.
+        '404':
+          description: No existe el recurso pedido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                orden_no_encontrada:
+                  summary: El id no corresponde a ninguna orden
+                  value:
+                    codigo: orden_no_encontrada
+                    mensaje: No encontramos esa orden. Revisa el enlace del correo de compra.
+        '409':
+          description: La orden ya no está pendiente o pasó el tiempo de la reserva.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                orden_no_pendiente:
+                  summary: La orden ya está pagada
+                  value:
+                    codigo: orden_no_pendiente
+                    mensaje: La orden ya está pagada; una orden pagada no se modifica.
+                orden_expirada:
+                  summary: Pasaron los 15 minutos de la reserva
+                  value:
+                    codigo: orden_expirada
+                    mensaje: La orden expiró el 29 de septiembre, 7:05 p. m. y liberó su cupo; hay que comprar de nuevo.
   /ordenes/{orden_id}/pago:
     post:
       operationId: confirmarPagoOrden
@@ -5660,6 +5815,43 @@ components:
           type: boolean
           const: true
           description: Autorización expresa de tratamiento de datos personales (Ley 1581 de 2012). Solo se acepta `true`.
+    OrdenCambios:
+      type: object
+      x-entidad: orden
+      additionalProperties: false
+      minProperties: 1
+      description: |-
+        Correcciones del comprador a una orden `pendiente`; solo viajan los campos que cambian. Los ítems, el
+        total y el estado no se editan.
+      properties:
+        comprador_nombre:
+          type: string
+          minLength: 3
+          maxLength: 120
+          description: Nombre y apellido del comprador; va impreso en las boletas.
+        comprador_correo:
+          type: string
+          format: email
+          minLength: 6
+          maxLength: 254
+          pattern: ^[^@\s]+@[^@\s]+\.[^@\s]+$
+          description: Correo adonde llegan las boletas. El servidor lo guarda en minúsculas.
+        comprador_telefono:
+          type: string
+          minLength: 13
+          maxLength: 13
+          pattern: ^\+573[0-9]{9}$
+          description: Celular colombiano en E.164 (`+573XXXXXXXXX`) para avisos de cambios del evento.
+        comprador_documento:
+          type: string
+          minLength: 6
+          maxLength: 10
+          pattern: ^[0-9]{6,10}$
+          description: Cédula (6 a 10 dígitos, sin puntos).
+        medio_pago:
+          allOf:
+            - $ref: '#/components/schemas/MedioPago'
+          description: Medio de pago elegido.
     ItemOrden:
       type: object
       x-entidad: item_orden

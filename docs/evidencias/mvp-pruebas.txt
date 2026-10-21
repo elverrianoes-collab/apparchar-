@@ -1,0 +1,173 @@
+# Pruebas automáticas del backend (npm test)
+# 2026-10-18 · Node.js v22.22.0 · base PGlite en memoria, nueva en cada archivo
+# Las mismas 109 pruebas pasan también contra PostgreSQL 16 (DATABASE_URL).
+
+▶ Documentación y salud
+  ✔ GET / describe la API y enlaza la documentación
+  ✔ GET /docs sirve Swagger UI y /openapi.json el contrato apuntando a este servidor
+  ✔ GET /salud consulta la base
+  ✔ un cuerpo en otra codificación que UTF-8 responde 400, no 500
+  ✔ una ruta que no existe responde 404 con el formato de error
+✔ Documentación y salud
+▶ Esquema de la base
+  ✔ servidor/db/esquema.sql es el mismo DDL de docs/modelo-datos.md (§11)
+  ✔ la base rechaza una clave guardada en claro (CHECK de clave_hash)
+✔ Esquema de la base
+▶ Crear (POST /eventos)
+  ✔ crea el evento en borrador, con slug, version 1 y sus tipos en orden
+  ✔ los tipos sin ventana de venta se venden desde ya hasta que empieza el evento
+  ✔ sin token responde 401
+  ✔ 400 si no cumple el esquema, si trae campos del servidor o tipos con el mismo nombre
+  ✔ 422 fechas_incoherentes: cierre antes del inicio o inicio en el pasado
+  ✔ 422 aforo_excedido, precio_en_evento_gratuito y ventana_de_venta_invalida
+✔ Crear (POST /eventos)
+▶ Leer: cartelera (GET /eventos)
+  ✔ muestra solo eventos publicados o agotados, con X-Total-Count
+  ✔ filtra por categoría, por texto sin tildes ni mayúsculas y por slug
+  ✔ filtra por fechas, ordena y pagina
+  ✔ 400 con fechas invertidas, un municipio sin tilde o por_pagina fuera de rango
+✔ Leer: cartelera (GET /eventos)
+▶ Leer: detalle (GET /eventos/{id}) y panel (GET /organizadores/{id}/eventos)
+  ✔ un evento publicado es público
+  ✔ un borrador solo lo ve su dueño; un token falso responde 401
+  ✔ el panel muestra todos los eventos del organizador, también los borradores
+  ✔ el panel de otro organizador responde 403; uno que no existe, 404
+✔ Leer: detalle (GET /eventos/{id}) y panel (GET /organizadores/{id}/eventos)
+▶ Actualizar (PATCH /eventos/{id})
+  ✔ edita con la versión leída: sube version y el slug no cambia
+  ✔ con una versión vieja responde 409 conflicto_de_version
+  ✔ ciclo de estados: publicar, pausar, reanudar y cancelar
+  ✔ 409 al publicar sin tipos de boleta o al pedir una transición que no existe
+  ✔ 400 sin version o pidiendo un estado que pone el sistema
+  ✔ 422: cierre antes del fin de la venta, aforo menor que los cupos, gratuito con precios
+  ✔ 422 al publicar un borrador cuya fecha de inicio ya pasó
+  ✔ con el token de otro organizador responde 403; si no existe, 404
+✔ Actualizar (PATCH /eventos/{id})
+▶ Eliminar (DELETE /eventos/{id})
+  ✔ borra un borrador con sus tipos de boleta: 204
+  ✔ un evento publicado no se borra: 409 evento_no_eliminable
+  ✔ con el token de otro organizador responde 403
+✔ Eliminar (DELETE /eventos/{id})
+▶ Tareas del sistema
+  ✔ un evento publicado cuya hora de cierre pasó queda finalizado y sale de la cartelera
+✔ Tareas del sistema
+▶ Crear (POST /ordenes)
+  ✔ crea la orden pendiente: calcula el total, congela el precio y reserva el cupo 15 minutos
+  ✔ una orden gratuita nace pagada, sin medio de pago y con sus boletas emitidas
+  ✔ 400: un tipo repetido en items, sin autorización de datos o con un celular inválido
+  ✔ los UUID en mayúsculas funcionan igual (y un tipo repetido se detecta aunque cambie la caja)
+  ✔ 404 si el evento no existe o es un borrador, o si un tipo no existe
+  ✔ 409: evento pausado, venta cerrada o cupo insuficiente (sin reservar nada)
+  ✔ 422: más del máximo por orden, tipo de otro evento, sin cédula en un evento +18 o sin medio de pago
+  ✔ el último cupo agota el evento; anular la orden lo devuelve a publicado
+✔ Crear (POST /ordenes)
+▶ Leer (GET /ordenes/{id} y GET /eventos/{id}/ordenes)
+  ✔ la orden se consulta con su enlace privado; 404 si no existe, 400 si no es un UUID
+  ✔ una orden que no se pagó en 15 minutos expira y libera el cupo
+  ✔ el reporte de ventas es solo para el dueño del evento
+✔ Leer (GET /ordenes/{id} y GET /eventos/{id}/ordenes)
+▶ Confirmar el pago (POST /ordenes/{id}/pago) y boletas
+  ✔ la pasarela confirma el pago: la orden queda pagada y emite una boleta por unidad
+  ✔ 401 sin la clave de la pasarela o con una equivocada
+  ✔ 409: ya pagada, referencia repetida o expirada
+  ✔ una boleta que no existe responde 404; un código mal escrito, 400
+✔ Confirmar el pago (POST /ordenes/{id}/pago) y boletas
+▶ Actualizar (PATCH /ordenes/{id})
+  ✔ el comprador corrige sus datos mientras la orden está pendiente
+  ✔ 400 con un cuerpo vacío o con campos que pone el servidor
+  ✔ 409 si ya está pagada; 404 si no existe
+✔ Actualizar (PATCH /ordenes/{id})
+▶ Eliminar (DELETE /ordenes/{id})
+  ✔ anula una orden pendiente y libera su cupo en ese momento
+  ✔ una orden pagada no se borra (409 orden_no_pendiente); una expirada, tampoco (409 orden_expirada)
+✔ Eliminar (DELETE /ordenes/{id})
+▶ Cancelar un evento con ventas
+  ✔ reembolsa las órdenes pagadas, cancela sus boletas y expira las pendientes
+✔ Cancelar un evento con ventas
+▶ Crear (POST /organizadores)
+  ✔ registra un organizador: 201, Location y sin la clave en la respuesta
+  ✔ la clave se guarda como hash bcrypt, nunca en claro
+  ✔ un correo repetido (sin importar mayúsculas) responde 409 correo_ya_registrado
+  ✔ valida el cuerpo contra el contrato: 400 con el detalle de cada campo
+  ✔ una clave de menos de 8 caracteres responde 400
+  ✔ los espacios al principio y al final no cuentan: un nombre de solo espacios responde 400
+  ✔ una clave de más de 72 bytes responde 400 (bcrypt no la recortará en silencio)
+  ✔ un JSON mal formado responde 400 solicitud_invalida
+✔ Crear (POST /organizadores)
+▶ Leer (GET /organizadores/{id})
+  ✔ devuelve el perfil público, sin correo ni teléfono
+  ✔ 404 si no existe y 400 si el id no es un UUID
+✔ Leer (GET /organizadores/{id})
+▶ Actualizar (PATCH /organizadores/{id})
+  ✔ el propio organizador cambia sus datos
+  ✔ el id de la ruta se acepta también en mayúsculas
+  ✔ sin token responde 401; con un token falso, también
+  ✔ con el token de otro organizador responde 403
+  ✔ un cuerpo vacío responde 400 y un correo ajeno 409
+  ✔ cambiar la clave: la nueva sirve para entrar y la vieja ya no
+✔ Actualizar (PATCH /organizadores/{id})
+▶ Eliminar (DELETE /organizadores/{id})
+  ✔ el propio organizador borra su cuenta: 204, y su token deja de servir
+  ✔ con el token de otro organizador responde 403
+  ✔ no borra una cuenta con eventos: 409 organizador_con_eventos
+✔ Eliminar (DELETE /organizadores/{id})
+✔ la cartelera de demostración tiene cuatro eventos y el stand-up está agotado
+✔ el organizador de demostración entra con su clave y ve su borrador en el panel
+✔ las boletas de la orden pagada entran por la puerta del concierto de esta noche
+✔ volver a cargar la semilla deja la base igual (se puede repetir antes de cada demostración)
+▶ Iniciar sesión (POST /sesiones)
+  ✔ con correo y clave correctos entrega un JWT de 8 horas y los datos del organizador
+  ✔ una clave equivocada y un correo inexistente responden igual: 401 credenciales_invalidas
+  ✔ sin clave responde 400
+✔ Iniciar sesión (POST /sesiones)
+▶ Rutas protegidas
+  ✔ rechazan un token vencido, uno sin vencimiento, uno firmado con otra clave y un encabezado mal escrito
+✔ Rutas protegidas
+▶ Crear (POST /eventos/{id}/tipos-boleta)
+  ✔ agrega un tipo a un evento propio: 201 y Location
+  ✔ un tipo nuevo devuelve a publicado un evento agotado
+  ✔ 401 sin token, 403 con el de otro organizador y 404 si el evento no existe
+  ✔ 400 con un precio negativo o sin cantidad_total
+  ✔ 409 con un nombre que ya existe en el evento o si el evento está cancelado
+  ✔ 422 si se pasa del aforo, si tiene precio en un evento gratuito o si la venta termina tarde
+✔ Crear (POST /eventos/{id}/tipos-boleta)
+▶ Leer (GET /tipos-boleta/{id})
+  ✔ el tipo de un evento publicado es público
+  ✔ el tipo de un borrador solo lo ve el dueño; si no existe, 404; un token falso, 401
+✔ Leer (GET /tipos-boleta/{id})
+▶ Actualizar (PATCH /tipos-boleta/{id})
+  ✔ cambia precio y descripción
+  ✔ ampliar el cupo de un evento agotado lo devuelve a publicado
+  ✔ 422 si el cupo baja de lo vendido, si se pasa del aforo o si la venta termina después del evento
+  ✔ 409 si otro tipo ya se llama así; 400 con un cuerpo vacío o un máximo fuera de rango
+  ✔ 403 con el token de otro organizador y 409 si el evento está cancelado
+✔ Actualizar (PATCH /tipos-boleta/{id})
+▶ Eliminar (DELETE /tipos-boleta/{id})
+  ✔ borra un tipo sin ventas: 204
+  ✔ un tipo con ventas no se borra: 409 tipo_boleta_con_ventas
+  ✔ el único tipo de un evento publicado no se borra: 409 evento_sin_tipos_de_boleta
+  ✔ los tipos de un evento cancelado no se borran: 409 evento_no_disponible
+  ✔ 403 con el token de otro organizador
+✔ Eliminar (DELETE /tipos-boleta/{id})
+▶ Registrar una lectura (POST /eventos/{id}/validaciones)
+  ✔ una boleta válida entra: 201 aceptada y la boleta queda usada
+  ✔ la misma boleta otra vez: 201 rechazada por ya_usada
+  ✔ dos celulares leen la misma boleta al tiempo: solo una lectura entra
+  ✔ el id del evento en mayúsculas no hace rechazar una boleta válida
+  ✔ el código se reconoce aunque llegue en minúsculas y con espacios
+  ✔ rechaza un código que no existe, una boleta de otro evento y una boleta cancelada
+  ✔ 409 evento_no_activo si la puerta no ha abierto o si el evento está cancelado
+  ✔ 401 sin token, 403 con el de otro organizador, 404 si el evento no existe y 400 sin código
+✔ Registrar una lectura (POST /eventos/{id}/validaciones)
+▶ Listar las lecturas (GET /eventos/{id}/validaciones)
+  ✔ el dueño ve todas las lecturas, las más recientes primero, y puede filtrar por resultado
+  ✔ otro organizador no las ve: 403
+✔ Listar las lecturas (GET /eventos/{id}/validaciones)
+ℹ tests 109
+ℹ suites 26
+ℹ pass 109
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 35605.016614

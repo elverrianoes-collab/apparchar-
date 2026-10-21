@@ -399,3 +399,27 @@ producto «contrato primero», con PostgreSQL, y se implementará en las Entrega
 - **Descartado.** SQLite: no tiene tipos `ENUM`, `timestamptz`, índices de
   trigramas ni las mismas restricciones, así que habría que mantener otro
   esquema.
+
+## D-26 · Una orden pendiente se corrige o se anula; una pagada, no
+
+- **Decisión.** Se agregan `actualizarOrden` (`PATCH /ordenes/{orden_id}`), para
+  que el comprador corrija su nombre, correo, celular, cédula o medio de pago, y
+  `eliminarOrden` (`DELETE /ordenes/{orden_id}`), para que anule la compra antes
+  de pagar: la orden se borra con sus ítems y el cupo vuelve a estar disponible
+  en ese momento. Las dos solo aplican a órdenes `pendiente`: una pagada responde
+  409 `orden_no_pendiente` y una vencida, 409 `orden_expirada`. Son públicas por
+  la misma razón que `obtenerOrden`: el UUID de la orden es el enlace privado de
+  la compra (D-04).
+- **Por qué.** El MVP pide crear, leer, actualizar y eliminar en cuatro tablas
+  (organizador, evento, tipo de boleta y orden). En una orden pendiente todavía
+  no hay dinero ni boletas, así que no es registro contable: corregir un correo
+  mal escrito evita que las boletas lleguen a otra persona, y anular libera el
+  cupo sin esperar los 15 minutos de la reserva (D-03). Una orden pagada sigue
+  siendo inmutable: los reembolsos los hace el sistema al cancelar el evento.
+- **Alcance del contrato.** Con D-23 y esta decisión, la API pasa de 20 a 25
+  operaciones: `iniciarSesion`, `actualizarOrganizador`, `eliminarOrganizador`,
+  `actualizarOrden` y `eliminarOrden`. Boletas y validaciones siguen siendo de
+  solo lectura y de solo agregar, como dice D-06.
+- **Descartado.** Un estado `cancelada` para las órdenes anuladas: obligaría a
+  cambiar el dominio `estado_orden` y sus `CHECK`, y una compra que nunca se pagó
+  no necesita quedar en el historial.
