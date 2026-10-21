@@ -1,0 +1,54 @@
+# En cada pull request: el contrato valida; modelo, contrato, datos y
+# formularios siguen siendo coherentes, y las pruebas del backend pasan.
+# Si falla, el PR no se integra.
+# El repositorio se arma con una rama por producto, así que los primeros PR no
+# traen todas las piezas: cada paso revisa lo que ya existe y avisa qué omitió.
+# Con todo integrado en main corre completo, igual que `npm run revisar`.
+name: Revisar contrato, coherencia y backend
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  revisar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Validar el contrato
+        run: |
+          if [ ! -f api/openapi.yaml ]; then
+            echo "::notice::Todavía no está api/openapi.yaml: se omite la validación del contrato."
+            exit 0
+          fi
+          npm run validar:api
+      - name: Verificar la coherencia
+        run: |
+          if [ ! -f scripts/verificar-coherencia.mjs ] || [ ! -f docs/modelo-datos.md ]; then
+            echo "::notice::Todavía no están el modelo y el verificador: se omite la coherencia."
+            exit 0
+          fi
+          partes=""
+          [ -f api/openapi.yaml ] && partes="$partes,contrato"
+          [ -f api/openapi.yaml ] && [ -f web/datos/ejemplo.json ] && partes="$partes,datos"
+          compgen -G "web/*.html" > /dev/null && partes="$partes,formularios"
+          partes="${partes#,}"
+          if [ -z "$partes" ]; then
+            echo "::notice::Solo está el modelo: todavía no hay contrato ni formularios con qué compararlo."
+            exit 0
+          fi
+          [ "$partes" = "contrato,datos,formularios" ] || echo "::notice::Revisión parcial: $partes."
+          npm run verificar -- --partes="$partes"
+      - name: Probar el backend
+        run: |
+          if [ ! -d servidor ] || [ ! -d pruebas ]; then
+            echo "::notice::Todavía no está el backend: se omiten sus pruebas."
+            exit 0
+          fi
+          npm test
