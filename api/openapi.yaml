@@ -2237,6 +2237,10 @@ paths:
         Borra un tipo de boleta que nunca se ha vendido (ningún `item_orden` lo referencia, ni siquiera de
         órdenes expiradas). Si tiene ventas responde 409 `tipo_boleta_con_ventas`: las boletas emitidas y el
         historial de compras dependen de él. Para dejar de venderlo, basta con adelantar `venta_termina_en`.
+
+        También responde 409 si es el único tipo de un evento que ya no está en borrador
+        (`evento_sin_tipos_de_boleta`: un evento a la venta necesita al menos uno) o si el evento está
+        `cancelado` o `finalizado` (`evento_no_disponible`).
       security:
         - bearerAuth: []
       parameters:
@@ -2289,12 +2293,22 @@ paths:
                     codigo: tipo_boleta_no_encontrado
                     mensaje: No encontramos ese tipo de boleta.
         '409':
-          description: El tipo de boleta ya tiene ventas.
+          description: El tipo de boleta ya tiene ventas, es el único de un evento a la venta o el evento está cancelado o finalizado.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
               examples:
+                evento_sin_tipos_de_boleta:
+                  summary: Es el único tipo de un evento publicado
+                  value:
+                    codigo: evento_sin_tipos_de_boleta
+                    mensaje: «Taller de avistamiento de aves» está publicado y necesita al menos un tipo de boleta. Agrega otro antes de borrar «Cupo único».
+                evento_no_disponible:
+                  summary: El evento ya está cancelado
+                  value:
+                    codigo: evento_no_disponible
+                    mensaje: «Noche de rock llanero» está cancelado. Sus tipos de boleta ya no se borran.
                 tipo_boleta_con_ventas:
                   summary: La Preventa de la noche de rock vendió sus 100 cupos
                   value:
