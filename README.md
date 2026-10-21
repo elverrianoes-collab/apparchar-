@@ -110,6 +110,10 @@ con el token de otro organizador, **403**.
 | Eventos | `PATCH /eventos/{id}` | Actualizar: editar, publicar, pausar o cancelar, con `version` | Sí |
 | Eventos | `DELETE /eventos/{id}` | Eliminar un borrador | Sí |
 | Eventos | `GET /organizadores/{id}/eventos` | Leer «Mis eventos» (panel del organizador) | Sí |
+| Tipos de boleta | `POST /eventos/{id}/tipos-boleta` | Crear una localidad (Preventa, General, VIP) | Sí |
+| Tipos de boleta | `GET /tipos-boleta/{id}` | Leer precio, cupo, vendidas y ventana de venta | Opcional |
+| Tipos de boleta | `PATCH /tipos-boleta/{id}` | Actualizar precio, cupo o ventana de venta | Sí |
+| Tipos de boleta | `DELETE /tipos-boleta/{id}` | Eliminar un tipo que nunca se ha vendido | Sí |
 
 ## Validación y errores
 
@@ -136,6 +140,11 @@ misma forma:
 | 409 | Choca con el estado actual: correo ya registrado, otra persona guardó antes (`conflicto_de_version`), transición de estado no permitida… |
 | 422 | Los datos rompen una regla del negocio: fechas incoherentes, cupos que superan el aforo, precio en un evento gratuito… |
 
+Los tipos de boleta cumplen las reglas del evento: la suma de sus cupos no
+supera el aforo, en un evento gratuito valen $0, la venta termina a más tardar al
+cierre del evento y el cupo nunca baja de lo ya vendido. Cuando ningún tipo tiene
+cupo, el evento pasa solo a `agotado`, y vuelve a `publicado` si se agrega cupo.
+
 Los eventos usan **bloqueo optimista**: cada edición envía la `version` que
 leyó; si otra persona guardó antes, la API responde 409 en lugar de pisar el
 cambio (decisión D-10). Los listados devuelven el total en la cabecera
@@ -157,7 +166,7 @@ apparchar-/
 ├── pruebas/                   Pruebas automáticas (node --test + supertest)
 ├── api/openapi.yaml           Contrato de la API (OpenAPI 3.1)
 ├── web/                       Prototipo navegable (HTML, CSS y JavaScript)
-├── docs/                      Modelo de datos y decisiones de arquitectura
+├── docs/                      Modelo de datos, decisiones, wireframes y evidencias
 ├── scripts/                   Verificador de coherencia y prueba del DDL
 ├── .env.example               Variables de entorno (solo nombres)
 └── .github/                   Revisión automática de cada pull request
