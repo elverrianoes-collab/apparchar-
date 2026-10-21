@@ -1,0 +1,7 @@
+$ npm run verificar
+Partes revisadas: contrato, datos, formularios.
+Modelo: 7 entidades, 81 atributos, 9 dominios.
+Contrato: 16 esquemas ligados a entidades. Datos de ejemplo: 12 eventos, 10 ordenes, 16 boletas.
+Formularios: 4 páginas, 36 campos ligados al modelo.
+
+OK: modelo, contrato, datos de ejemplo y formularios son coherentes.

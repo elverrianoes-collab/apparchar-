@@ -1,0 +1,18 @@
+Lighthouse 13.5.0 · categoría Accesibilidad · servidor local (npm run web) · 30 de septiembre de 2026
+
+100  movil  index.html 
+100  escritorio  index.html 
+100  movil  index.html?simular=cargando 
+100  escritorio  index.html?simular=cargando 
+100  movil  index.html?simular=vacio 
+100  escritorio  index.html?simular=vacio 
+100  movil  index.html?simular=error 
+100  escritorio  index.html?simular=error 
+100  movil  detalle.html?evento=noche-de-rock-llanero-sabana-electrica-en-vivo-2026-7d40 
+100  escritorio  detalle.html?evento=noche-de-rock-llanero-sabana-electrica-en-vivo-2026-7d40 
+100  movil  detalle.html?evento=evento-que-no-existe 
+100  escritorio  detalle.html?evento=evento-que-no-existe 
+100  movil  publicar.html 
+100  escritorio  publicar.html 
+100  movil  puerta.html 
+100  escritorio  puerta.html 
