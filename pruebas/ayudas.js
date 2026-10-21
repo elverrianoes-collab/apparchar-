@@ -92,3 +92,38 @@ export function cumpleContrato(operationId, respuesta) {
     }
   }
 }
+
+// ------------------------------------------------------------------------------
+// Eventos de prueba: un concierto en Yopal dentro de 10 días, con dos tipos de boleta.
+export function datosEvento(cambios = {}) {
+  return {
+    nombre: 'Noche de rock llanero: Sabana Eléctrica en vivo',
+    descripcion: 'Sabana Eléctrica presenta su nuevo sencillo en vivo, con invitados de Aguazul.',
+    categoria: 'concierto',
+    lugar: 'Bar La Tranquera',
+    direccion: 'Carrera 23 # 12-40, barrio El Centro',
+    municipio: 'Yopal',
+    fecha_inicio: enDias(10, 21),
+    fecha_fin: enDias(11, 2),
+    aforo_total: 180,
+    tipos_boleta: [
+      { nombre: 'Preventa', precio_cop: 25000, cantidad_total: 50 },
+      { nombre: 'General', precio_cop: 35000, cantidad_total: 100 },
+    ],
+    ...cambios,
+  };
+}
+
+export async function crearEvento(api, auth, cambios = {}) {
+  const r = await api.post('/eventos').set(auth).send(datosEvento(cambios));
+  assert.equal(r.status, 201, JSON.stringify(r.body));
+  return r.body;
+}
+
+// Crea el evento y lo publica (borrador → publicado).
+export async function crearEventoPublicado(api, auth, cambios = {}) {
+  const evento = await crearEvento(api, auth, cambios);
+  const r = await api.patch(`/eventos/${evento.id}`).set(auth).send({ version: evento.version, estado: 'publicado' });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  return r.body;
+}

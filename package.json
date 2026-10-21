@@ -9,6 +9,7 @@
     "api": "node servidor/index.js",
     "api:dev": "node --watch servidor/index.js",
     "test": "node --test",
+    "web": "serve web --config ../serve.json --listen 8080",
     "mock": "prism mock api/openapi.yaml --port 4010",
     "validar:api": "redocly lint api/openapi.yaml",
     "verificar": "node scripts/verificar-coherencia.mjs",

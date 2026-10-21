@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Publica tu evento en Casanare · Apparchar</title>
+  <meta name="description" content="Formulario para organizadores: publica tu evento en Casanare con tipos de boleta, cupos, precios y ventana de venta. Prototipo académico con datos de ejemplo.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap">
+  <link rel="stylesheet" href="css/estilos.css">
+  <script src="js/app.js" defer></script>
+</head>
+<body data-pagina="publicar">
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+
+  <header class="cabecera zona-oscura">
+    <p class="aviso-prototipo">
+      <span class="contenedor">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+        <span>Prototipo académico (Tecnologías Web 2026-B, Unitrópico). Los eventos, organizadores y compras son datos de ejemplo: aquí no se venden boletas reales.</span>
+      </span>
+    </p>
+    <div class="contenedor cabecera__barra">
+      <a class="marca" href="index.html">
+        <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M8 18a4 4 0 0 1 4-4h40a4 4 0 0 1 4 4v8a6 6 0 0 0 0 12v8a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4v-8a6 6 0 0 0 0-12z" fill="#fbbf24"/><path d="M40 18v5M40 29v6M40 41v5" stroke="#0f172a" stroke-width="3" stroke-linecap="round"/><rect x="16" y="23" width="14" height="14" rx="2" fill="none" stroke="#0f172a" stroke-width="3"/><rect x="21" y="28" width="4" height="4" fill="#0f172a"/></svg>
+        <span>Apparchar</span>
+      </a>
+      <nav class="menu" aria-label="Principal">
+        <ul>
+          <li><a href="index.html">Cartelera</a></li>
+          <li><a href="publicar.html" aria-current="page">Publicar evento</a></li>
+          <li><a href="puerta.html">Validar en puerta</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="contenido" tabindex="-1">
+    <div class="zona-oscura">
+      <div class="contenedor encabezado-pagina">
+        <h1>Publica tu evento</h1>
+        <p>Todos los campos son obligatorios, salvo los marcados como opcionales.</p>
+      </div>
+    </div>
+
+    <div class="contenedor contenedor--texto formulario-principal">
+      <form id="form-publicar" novalidate>
+        <div id="errores-publicar" class="resumen-errores" tabindex="-1" hidden>
+          <h2 class="resumen-errores__titulo" id="errores-publicar-titulo">Revisa los campos antes de publicar</h2>
+          <ul></ul>
+        </div>
+
+        <fieldset data-entidad="organizador" id="grupo-organizador">
+          <legend>1. Sobre ti</legend>
+          <div class="rejilla-campos">
+            <div class="campo campo--ancho">
+              <label for="organizador-nombre">Nombre del organizador o colectivo</label>
+              <input type="text" id="organizador-nombre" required name="nombre" autocomplete="organization" maxlength="120" aria-describedby="organizador-nombre-ayuda">
+              <p class="ayuda" id="organizador-nombre-ayuda">Así te verá el público, por ejemplo «Colectivo Sabana Rock».</p>
+            </div>
+            <div class="campo campo--ancho">
+              <label for="organizador-correo">Correo de contacto</label>
+              <input type="email" id="organizador-correo" required name="correo" autocomplete="email" maxlength="254" spellcheck="false">
+            </div>
+            <div class="campo">
+              <label for="organizador-telefono">Teléfono de contacto</label>
+              <input type="tel" id="organizador-telefono" required name="telefono" autocomplete="tel-national" inputmode="numeric" maxlength="20" aria-describedby="organizador-telefono-ayuda">
+              <p class="ayuda" id="organizador-telefono-ayuda">Celular de 10 dígitos o fijo de Casanare que empieza por 608.</p>
+            </div>
+            <div class="campo">
+              <label for="organizador-municipio">Municipio</label>
+              <select id="organizador-municipio" required name="municipio" autocomplete="address-level2">
+                <option value="">Elige un municipio</option>
+                <option>Aguazul</option>
+                <option>Chámeza</option>
+                <option>Hato Corozal</option>
+                <option>La Salina</option>
+                <option>Maní</option>
+                <option>Monterrey</option>
+                <option>Nunchía</option>
+                <option>Orocué</option>
+                <option>Paz de Ariporo</option>
+                <option>Pore</option>
+                <option>Recetor</option>
+                <option>Sabanalarga</option>
+                <option>Sácama</option>
+                <option>San Luis de Palenque</option>
+                <option>Támara</option>
+                <option>Tauramena</option>
+                <option>Trinidad</option>
+                <option>Villanueva</option>
+                <option>Yopal</option>
+              </select>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset data-entidad="evento" id="grupo-evento">
+          <legend>2. Tu evento</legend>
+          <div class="rejilla-campos">
+            <div class="campo campo--ancho">
+              <label for="evento-nombre">Nombre del evento</label>
+              <input type="text" id="evento-nombre" required name="nombre" maxlength="120" autocomplete="off">
+            </div>
+            <div class="campo campo--ancho">
+              <label for="evento-categoria">Categoría</label>
+              <select id="evento-categoria" required name="categoria">
+                <option value="">Elige una categoría</option>
+                <option value="concierto">Concierto</option>
+                <option value="fiesta">Fiesta</option>
+                <option value="conferencia">Conferencia</option>
+                <option value="deportes">Deportes</option>
+                <option value="teatro">Teatro</option>
+                <option value="festival">Festival</option>
+                <option value="otro">Otro</option>
+              </select>
+            </div>
+            <div class="campo campo--ancho">
+              <label for="evento-descripcion">Descripción</label>
+              <textarea id="evento-descripcion" required name="descripcion" rows="5" maxlength="2000" aria-describedby="evento-descripcion-ayuda evento-descripcion-contador"></textarea>
+              <p class="ayuda" id="evento-descripcion-ayuda">Qué va a pasar, a qué hora abren puertas y qué debe llevar la gente.</p>
+              <p class="ayuda" id="evento-descripcion-contador">0 de 2.000 caracteres, mínimo 20</p>
+            </div>
+            <div class="campo">
+              <label for="evento-fecha-inicio">Inicio</label>
+              <input type="datetime-local" id="evento-fecha-inicio" required name="fecha_inicio" aria-describedby="evento-fecha-inicio-ayuda">
+              <p class="ayuda" id="evento-fecha-inicio-ayuda">Fecha y hora de Colombia.</p>
+            </div>
+            <div class="campo">
+              <label for="evento-fecha-fin">Cierre</label>
+              <input type="datetime-local" id="evento-fecha-fin" required name="fecha_fin" aria-describedby="evento-fecha-fin-ayuda">
+              <p class="ayuda" id="evento-fecha-fin-ayuda">Puede ser la madrugada siguiente.</p>
+            </div>
+            <div class="campo campo--ancho">
+              <label for="evento-lugar">Lugar</label>
+              <input type="text" id="evento-lugar" required name="lugar" maxlength="120" aria-describedby="evento-lugar-ayuda">
+              <p class="ayuda" id="evento-lugar-ayuda">Por ejemplo «Bar La Tranquera» o «Coliseo municipal».</p>
+            </div>
+            <div class="campo campo--ancho">
+              <label for="evento-direccion">Dirección</label>
+              <input type="text" id="evento-direccion" required name="direccion" maxlength="160" autocomplete="off" aria-describedby="evento-direccion-ayuda">
+              <p class="ayuda" id="evento-direccion-ayuda">Por ejemplo «Carrera 23 # 12-40, barrio El Centro».</p>
+            </div>
+            <div class="campo">
+              <label for="evento-municipio">Municipio del evento</label>
+              <select id="evento-municipio" required name="municipio">
+                <option value="">Elige un municipio</option>
+                <option>Aguazul</option>
+                <option>Chámeza</option>
+                <option>Hato Corozal</option>
+                <option>La Salina</option>
+                <option>Maní</option>
+                <option>Monterrey</option>
+                <option>Nunchía</option>
+                <option>Orocué</option>
+                <option>Paz de Ariporo</option>
+                <option>Pore</option>
+                <option>Recetor</option>
+                <option>Sabanalarga</option>
+                <option>Sácama</option>
+                <option>San Luis de Palenque</option>
+                <option>Támara</option>
+                <option>Tauramena</option>
+                <option>Trinidad</option>
+                <option>Villanueva</option>
+                <option>Yopal</option>
+              </select>
+            </div>
+            <div class="campo">
+              <label for="evento-aforo-total">Aforo</label>
+              <input type="number" id="evento-aforo-total" required name="aforo_total" min="1" max="100000" step="1" inputmode="numeric" aria-describedby="evento-aforo-total-ayuda">
+              <p class="ayuda" id="evento-aforo-total-ayuda">Capacidad autorizada del lugar.</p>
+            </div>
+            <div class="campo">
+              <label for="evento-edad-minima">Edad mínima</label>
+              <select id="evento-edad-minima" name="edad_minima">
+                <option value="">Todo público</option>
+                <option value="12">Mayores de 12</option>
+                <option value="14">Mayores de 14</option>
+                <option value="16">Mayores de 16</option>
+                <option value="18">Mayores de 18</option>
+              </select>
+            </div>
+            <div class="campo campo--ancho">
+              <div class="opcion">
+                <input type="checkbox" id="evento-es-gratuito" name="es_gratuito" value="true">
+                <label for="evento-es-gratuito">Es un evento gratuito: entrada libre con boleta para controlar el aforo</label>
+              </div>
+            </div>
+          </div>
+
+          <fieldset class="mt-5" id="grupo-reembolso">
+            <legend>Política de reembolso</legend>
+            <div class="grupo-opciones">
+              <div class="opcion opcion--caja">
+                <input type="radio" id="evento-politica-ninguno" name="politica_reembolso" value="ninguno">
+                <label for="evento-politica-ninguno">Sin reembolso</label>
+              </div>
+              <div class="opcion opcion--caja">
+                <input type="radio" id="evento-politica-24h" name="politica_reembolso" value="hasta_24h_antes" checked>
+                <label for="evento-politica-24h">Hasta 24 horas antes</label>
+              </div>
+              <div class="opcion opcion--caja">
+                <input type="radio" id="evento-politica-72h" name="politica_reembolso" value="hasta_72h_antes">
+                <label for="evento-politica-72h">Hasta 72 horas antes</label>
+              </div>
+            </div>
+          </fieldset>
+
+          <div class="campo">
+            <label for="evento-imagen-url">Enlace de la imagen del póster <span class="opcional">(opcional)</span></label>
+            <input type="url" id="evento-imagen-url" name="imagen_url" maxlength="500" inputmode="url" spellcheck="false" aria-describedby="evento-imagen-url-ayuda">
+            <p class="ayuda" id="evento-imagen-url-ayuda">Debe empezar por https://</p>
+          </div>
+        </fieldset>
+
+        <fieldset data-entidad="tipo_boleta" id="grupo-tipos">
+          <legend>3. Tipos de boleta</legend>
+          <p class="ayuda">Crea hasta 10 tipos (por ejemplo Preventa, General y VIP). La suma de los cupos no puede superar el aforo.</p>
+          <div id="lista-filas-tipo"></div>
+          <template id="plantilla-fila-tipo">
+            <fieldset class="fila-tipo" data-entidad="tipo_boleta">
+              <legend>Tipo de boleta 1</legend>
+              <div class="rejilla-campos">
+                <div class="campo campo--ancho">
+                  <label for="tipo-N-nombre">Nombre del tipo</label>
+                  <input type="text" id="tipo-N-nombre" required name="nombre" maxlength="60" autocomplete="off" aria-describedby="tipo-N-nombre-ayuda">
+                  <p class="ayuda" id="tipo-N-nombre-ayuda">Por ejemplo «General» o «VIP».</p>
+                </div>
+                <div class="campo campo--ancho">
+                  <label for="tipo-N-descripcion">Qué incluye <span class="opcional">(opcional)</span></label>
+                  <input type="text" id="tipo-N-descripcion" name="descripcion" maxlength="500" autocomplete="off">
+                </div>
+                <div class="campo">
+                  <label for="tipo-N-precio-cop">Precio en pesos</label>
+                  <input type="number" id="tipo-N-precio-cop" required name="precio_cop" min="0" max="10000000" step="1" inputmode="numeric" aria-describedby="tipo-N-precio-cop-ayuda">
+                  <p class="ayuda" id="tipo-N-precio-cop-ayuda">Sin puntos. 0 si es gratis.</p>
+                </div>
+                <div class="campo">
+                  <label for="tipo-N-cantidad-total">Cupos</label>
+                  <input type="number" id="tipo-N-cantidad-total" required name="cantidad_total" min="1" max="100000" step="1" inputmode="numeric">
+                </div>
+                <div class="campo">
+                  <label for="tipo-N-maximo-por-orden">Máximo por compra</label>
+                  <input type="number" id="tipo-N-maximo-por-orden" required name="maximo_por_orden" min="1" max="20" step="1" value="10" inputmode="numeric" aria-describedby="tipo-N-maximo-por-orden-ayuda">
+                  <p class="ayuda" id="tipo-N-maximo-por-orden-ayuda">Entre 1 y 20; frena la reventa.</p>
+                </div>
+                <div class="campo">
+                  <label for="tipo-N-venta-inicia-en">La venta abre</label>
+                  <input type="datetime-local" id="tipo-N-venta-inicia-en" required name="venta_inicia_en">
+                </div>
+                <div class="campo">
+                  <label for="tipo-N-venta-termina-en">La venta cierra</label>
+                  <input type="datetime-local" id="tipo-N-venta-termina-en" required name="venta_termina_en" aria-describedby="tipo-N-venta-termina-en-ayuda">
+                  <p class="ayuda" id="tipo-N-venta-termina-en-ayuda">Antes del cierre del evento.</p>
+                </div>
+              </div>
+              <div class="fila-tipo__acciones">
+                <button type="button" class="boton boton--peligro" data-quitar-tipo>Quitar este tipo</button>
+              </div>
+            </fieldset>
+          </template>
+          <p class="contador-cupos" id="contador-cupos" aria-live="polite">Cupos asignados: 0 de 0 del aforo</p>
+          <div class="acciones">
+            <button type="button" class="boton boton--secundario" id="agregar-tipo">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg>
+              Agregar otro tipo de boleta
+            </button>
+          </div>
+          <p class="ayuda mt-4" id="tope-tipos" hidden>Llegaste al máximo de 10 tipos de boleta.</p>
+        </fieldset>
+
+        <div id="alerta-envio" class="alerta-envio"></div>
+
+        <div class="acciones">
+          <button type="submit" class="boton boton--primario boton--grande" value="publicar" data-accion="publicar">Publicar evento</button>
+          <button type="submit" class="boton boton--secundario boton--grande" value="borrador" data-accion="borrador">Guardar como borrador</button>
+        </div>
+      </form>
+
+      <section id="confirmacion-publicar" class="confirmacion" hidden></section>
+    </div>
+  </main>
+
+  <footer class="pie zona-oscura">
+    <div class="contenedor">
+      <nav aria-label="Estados del prototipo">
+        <p class="pie__titulo">Estados del prototipo</p>
+        <ul>
+          <li><a href="index.html?simular=cargando">Cartelera cargando</a></li>
+          <li><a href="index.html?simular=vacio">Cartelera vacía</a></li>
+          <li><a href="index.html?simular=error">Cartelera con error</a></li>
+          <li><a href="detalle.html?evento=evento-que-no-existe">Evento que no existe</a></li>
+          <li><a href="publicar.html?simular=error">Publicar con error de red</a></li>
+        </ul>
+      </nav>
+      <p>Datos de ejemplo: eventos, organizadores y precios ficticios en municipios reales de Casanare. Fecha del prototipo: jueves 1 de octubre de 2026.</p>
+      <p>© 2026 Apparchar · Proyecto de Tecnologías Web, Unitrópico</p>
+    </div>
+  </footer>
+</body>
+</html>
