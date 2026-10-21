@@ -1,0 +1,33 @@
+# Dependencias (se instalan con npm ci)
+node_modules/
+
+# Base de datos local de PGlite (npm run api sin DATABASE_URL)
+.datos/
+
+# Variables de entorno: solo se versiona .env.example
+.env
+.env.*
+!.env.example
+
+# Sistema operativo y editores
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*~
+
+# Registros, temporales y reportes locales
+*.log
+npm-debug.log*
+coverage/
+tmp/
+.cache/
+reportes/
+
+# Volcados de memoria y empaquetados (binarios pesados fuera del historial)
+core
+core.[0-9]*
+*.zip
+*.tar.gz

@@ -1,0 +1,53 @@
+$ DATABASE_URL=postgres://postgres@localhost:5433/postgres npm run probar:modelo
+# Servidor desechable de PostgreSQL 17 (en el VPS, con socket propio en vez de Docker).
+# Fecha: 2026-09-30 17:58 (hora de Colombia)
+
+PostgreSQL 17.7 (Ubuntu 17.7-0ubuntu0.25.04.1)
+DDL: 7 tablas, 9 tipos, 13 índices declarados
+DDL aplicado sin errores.
+ok  acepta: organizador válido
+ok  rechaza: correo repetido → duplicate key value violates unique constraint "organizador_correo_key"
+ok  rechaza: teléfono no colombiano → new row for relation "organizador" violates check constraint "organizador_telefono_check"
+ok  rechaza: municipio fuera del dominio de Casanare → invalid input value for enum municipio_casanare: "Yopall"
+ok  rechaza: correo de menos de 6 caracteres → new row for relation "organizador" violates check constraint "organizador_correo_check"
+ok  acepta: teléfono fijo de Casanare (608)
+ok  acepta: evento válido
+ok  rechaza: fecha_fin anterior a fecha_inicio → new row for relation "evento" violates check constraint "evento_fechas_ck"
+ok  rechaza: slug con mayúsculas → new row for relation "evento" violates check constraint "evento_slug_check"
+ok  rechaza: categoría fuera del dominio → invalid input value for enum categoria_evento: "coleo"
+ok  acepta: tipo de boleta con 2 cupos (venta_inicia_en por defecto)
+ok  rechaza: nombre de tipo repetido en el evento → duplicate key value violates unique constraint "tipo_boleta_evento_id_nombre_key"
+ok  reserva condicional: 2 de 2 reservadas; la siguiente no actualiza filas (→ 409)
+ok  rechaza: sobreventa directa (CHECK de cupo) → new row for relation "tipo_boleta" violates check constraint "tipo_boleta_cupo_ck"
+ok  rechaza: orden sin autorización de datos → new row for relation "orden" violates check constraint "orden_autoriza_tratamiento_datos_check"
+ok  rechaza: orden paga sin medio de pago → new row for relation "orden" violates check constraint "orden_medio_pago_ck"
+ok  acepta: orden gratuita sin medio de pago
+ok  rechaza: orden pendiente con pagada_en → new row for relation "orden" violates check constraint "orden_pagada_en_ck"
+ok  rechaza: orden pagada sin referencia de pago → new row for relation "orden" violates check constraint "orden_referencia_ck"
+ok  acepta: orden pagada con referencia de pago
+ok  expira_en por defecto: creado_en + 15 minutos
+ok  rechaza: misma referencia de pago en otra orden → duplicate key value violates unique constraint "orden_referencia_pago_key"
+ok  rechaza: orden que expira antes de crearse → new row for relation "orden" violates check constraint "orden_expira_ck"
+ok  acepta: ítem de orden
+ok  rechaza: tipo repetido en la misma orden → duplicate key value violates unique constraint "item_orden_orden_id_tipo_boleta_id_key"
+ok  acepta: boleta válida
+ok  acepta: tipo VIP que la orden no compró
+ok  rechaza: boleta de un tipo que su orden no compró (FK compuesta) → insert or update on table "boleta" violates foreign key constraint "boleta_item_orden_fk"
+ok  rechaza: código con letra ambigua (O) → new row for relation "boleta" violates check constraint "boleta_codigo_check"
+ok  rechaza: código repetido → duplicate key value violates unique constraint "boleta_codigo_key"
+ok  rechaza: boleta usada sin usada_en → new row for relation "boleta" violates check constraint "boleta_usada_en_ck"
+ok  acepta: primera validación aceptada
+ok  rechaza: segunda validación aceptada de la misma boleta → duplicate key value violates unique constraint "validacion_una_aceptada_idx"
+ok  acepta: reintento registrado como rechazo ya_usada
+ok  rechaza: rechazo sin motivo → new row for relation "validacion" violates check constraint "validacion_motivo_ck"
+ok  rechaza: no_existe con boleta → new row for relation "validacion" violates check constraint "validacion_no_existe_ck"
+ok  acepta: código inexistente registrado
+ok  disparador: version 1 → 2 y actualizado_en tocado
+ok  bloqueo optimista: una edición con version=1 ya no actualiza filas (→ 409)
+ok  rechaza: cambiar el slug de un evento (inmutable) → evento.slug es inmutable
+ok  acepta: evento para la búsqueda
+ok  búsqueda sin mayúsculas ni tildes: «SILBON» encuentra «La leyenda del Silbón»
+ok  la búsqueda usa el índice de trigramas evento_busqueda_idx
+ok  rechaza: borrar organizador con eventos (RESTRICT) → update or delete on table "organizador" violates foreign key constraint "evento_organizador_id_fkey" on table "evento"
+Índices: boleta_codigo_key boleta_orden_idx boleta_pkey boleta_tipo_idx evento_busqueda_idx evento_cartelera_idx evento_categoria_idx evento_municipio_idx evento_organizador_idx evento_pkey evento_slug_key item_orden_orden_id_tipo_boleta_id_key item_orden_pkey item_orden_tipo_idx orden_evento_idx orden_pendiente_expira_idx orden_pkey orden_referencia_pago_key organizador_correo_key organizador_pkey tipo_boleta_evento_id_nombre_key tipo_boleta_pkey validacion_evento_idx validacion_pkey validacion_una_aceptada_idx
+RESULTADO: 44 comprobaciones, todas correctas.

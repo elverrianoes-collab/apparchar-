@@ -1,0 +1,10 @@
+# Configuración de Redocly CLI para `npm run validar:api` (redocly lint api/openapi.yaml).
+# Parte del conjunto de reglas recomendado y solo apaga una, con su porqué.
+extends:
+  - recommended
+
+rules:
+  # La regla avisa cuando un servidor apunta a example.com o a localhost, porque
+  # suele ser un ejemplo olvidado. Aquí no lo es: http://localhost:3000 es el
+  # backend local de la Entrega 3, contra el que se probará este mismo contrato.
+  no-server-example.com: off

@@ -1,0 +1,40 @@
+{
+  "name": "plataforma-apparchar",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Boletería digital con QR para organizadores de eventos de Casanare: backend del MVP (API REST con Express y PostgreSQL), contrato OpenAPI, modelo de datos y prototipo web.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "api": "node servidor/index.js",
+    "api:dev": "node --watch servidor/index.js",
+    "test": "node --test",
+    "mock": "prism mock api/openapi.yaml --port 4010",
+    "validar:api": "redocly lint api/openapi.yaml",
+    "verificar": "node scripts/verificar-coherencia.mjs",
+    "probar:modelo": "bash scripts/probar-modelo.sh",
+    "revisar": "npm run validar:api && npm run verificar && npm test"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "bcryptjs": "3.0.3",
+    "cors": "2.8.6",
+    "express": "5.2.1",
+    "express-rate-limit": "8.7.0",
+    "js-yaml": "4.3.2",
+    "jsonwebtoken": "9.0.3",
+    "pg": "8.23.1",
+    "swagger-ui-express": "5.0.1"
+  },
+  "devDependencies": {
+    "@redocly/cli": "2.57.0",
+    "@stoplight/prism-cli": "5.14.2",
+    "serve": "14.2.6",
+    "supertest": "7.3.1"
+  }
+}
