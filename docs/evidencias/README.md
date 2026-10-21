@@ -1,4 +1,17 @@
-# Evidencias de la Entrega 2
+# Evidencias
+
+## MVP del backend
+
+Se generaron el 18 de octubre de 2026 sobre la versión 0.3.0.
+
+| Archivo | Qué muestra | Requisito del MVP |
+|---|---|---|
+| [`mvp-pruebas.txt`](mvp-pruebas.txt) | `npm test`: 109 pruebas automáticas en verde (CRUD de los cuatro recursos, autenticación, validación, pagos, boletas y puerta). Cada respuesta se valida además contra el contrato. | CRUD, autenticación y validación |
+| [`mvp-postman.txt`](mvp-postman.txt) | La colección de Postman ejecutada con Newman contra el backend con PostgreSQL: 47 peticiones y 76 comprobaciones sin fallas. | Documentación y demostración funcional |
+| [`mvp-swagger.png`](mvp-swagger.png) | Swagger UI servido por el backend en `/docs`. | Documentación |
+| [`mvp-swagger-cartelera.png`](mvp-swagger-cartelera.png) | «Try it out» de `GET /eventos` contra el backend real, con los datos de `npm run demo` y la cabecera `X-Total-Count`. | Documentación y demostración funcional |
+
+## Entrega 2
 
 Capturas y salidas de las verificaciones que pide el enunciado. Se generaron el
 30 de septiembre de 2026 sobre la versión 0.2.0.

@@ -8,6 +8,8 @@
   "scripts": {
     "api": "node servidor/index.js",
     "api:dev": "node --watch servidor/index.js",
+    "semilla": "node servidor/db/semilla.js",
+    "demo": "node servidor/demo.js",
     "test": "node --test",
     "web": "serve web --config ../serve.json --listen 8080",
     "mock": "prism mock api/openapi.yaml --port 4010",

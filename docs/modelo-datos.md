@@ -470,7 +470,7 @@ ellas.
 | `organizador` | `Organizador`, `OrganizadorPublico`, `OrganizadorNuevo`, `OrganizadorCambios` | `OrganizadorPublico` omite correo y teléfono: es lo que se muestra en la cartelera. Ningún esquema de respuesta trae `clave_hash`; la `clave` de los esquemas de entrada se guarda como ese hash. |
 | `evento` | `Evento`, `EventoNuevo`, `EventoCambios` | `Evento.tipos_boleta` es la relación 1:N con `tipo_boleta` y `Evento.organizador` la relación con `organizador` (su parte pública, `OrganizadorPublico`); las dos van anidadas (`x-relacion`). |
 | `tipo_boleta` | `TipoBoleta`, `TipoBoletaNuevo`, `TipoBoletaCambios` | — |
-| `orden` | `Orden`, `OrdenNueva` | `Orden.items` es la relación 1:N con `item_orden`, anidada (`x-relacion`). |
+| `orden` | `Orden`, `OrdenNueva`, `OrdenCambios` | `Orden.items` es la relación 1:N con `item_orden`, anidada (`x-relacion`). `OrdenCambios` corrige los datos del comprador mientras la orden está pendiente. |
 | `item_orden` | `ItemOrden`, `ItemOrdenNuevo` | — |
 | `boleta` | `Boleta` | — |
 | `validacion` | `Validacion`, `ValidacionNueva` | — |

@@ -6,7 +6,18 @@ código QR y controlen el aforo en la puerta. Este repositorio contiene el
 OpenAPI 3.1, el modelo de datos y el prototipo web navegable.
 
 **Documentación de la API:** Swagger UI en <http://localhost:3000/docs> al correr `npm run api` ·
+**Postman:** [`postman/apparchar-mvp.postman_collection.json`](postman/apparchar-mvp.postman_collection.json) ·
 **Contrato:** [`api/openapi.yaml`](api/openapi.yaml) · **Modelo de datos:** [`docs/modelo-datos.md`](docs/modelo-datos.md) · **Versión:** 0.3.0 (MVP)
+
+## Cumplimiento del MVP
+
+| Requisito | Cómo se cumple |
+|---|---|
+| **CRUD sobre cuatro recursos** | Crear, leer, actualizar y eliminar en cuatro tablas: `organizador`, `evento`, `tipo_boleta` y `orden` (más boletas y validaciones en la puerta). Ver [Rutas de la API](#rutas-de-la-api). |
+| **Autenticación** | Registro con clave guardada como hash bcrypt, inicio de sesión que entrega un JWT (HS256, 8 horas) y rutas protegidas con `Authorization: Bearer`: 401 sin token válido, 403 con el de otro organizador. Ver [Autenticación](#autenticación). |
+| **Validación** | Cada petición se valida contra los esquemas del contrato antes de tocar la base (400 con detalle por campo) y cada servicio aplica las reglas del negocio (409 y 422). Ver [Validación y errores](#validación-y-errores). |
+| **Documentación** | Swagger UI en `/docs`, generado del contrato OpenAPI 3.1, y una colección de Postman con 47 peticiones y 76 comprobaciones. |
+| **Demostración funcional** | `npm run demo` arranca con datos de Casanare y [`docs/demo-mvp.md`](docs/demo-mvp.md) es el guion de la prueba en vivo. Además, `npm test` corre las pruebas automáticas de toda la API. |
 
 ## El problema
 
@@ -62,6 +73,12 @@ mismo PostgreSQL compilado a WebAssembly, y guarda la base en `.datos/pglite`
    ```bash
    npm test
    ```
+5. Para la demostración, `npm run demo` borra la base local (o, si hay
+   `DATABASE_URL`, vacía las tablas de esa base), carga datos de ejemplo de
+   Casanare (organizador `demo@apparchar.co`, clave `Apparchar2026`, un concierto
+   que empieza en 3 horas, órdenes y boletas) y arranca el servidor. Antes, cierra
+   cualquier otro servidor de Apparchar abierto. `npm run semilla` solo carga los
+   datos (con el servidor apagado).
 
 Opcional: copia `.env.example` como `.env` para cambiar el puerto, la clave
 secreta de los tokens (`JWT_SECRETO`) o la clave de la pasarela. Para usar un
@@ -114,6 +131,16 @@ con el token de otro organizador, **403**.
 | Tipos de boleta | `GET /tipos-boleta/{id}` | Leer precio, cupo, vendidas y ventana de venta | Opcional |
 | Tipos de boleta | `PATCH /tipos-boleta/{id}` | Actualizar precio, cupo o ventana de venta | Sí |
 | Tipos de boleta | `DELETE /tipos-boleta/{id}` | Eliminar un tipo que nunca se ha vendido | Sí |
+| Órdenes | `POST /ordenes` | Crear una compra sin cuenta: reserva el cupo 15 minutos | No |
+| Órdenes | `GET /ordenes/{id}` | Leer la orden (el id es el enlace privado de la compra) | No |
+| Órdenes | `PATCH /ordenes/{id}` | Actualizar los datos del comprador mientras está pendiente | No |
+| Órdenes | `DELETE /ordenes/{id}` | Eliminar (anular) una orden pendiente y liberar su cupo | No |
+| Órdenes | `POST /ordenes/{id}/pago` | Confirmar el pago (lo llama la pasarela con `X-Clave-Pasarela`) | Clave de la pasarela |
+| Órdenes | `GET /eventos/{id}/ordenes` | Leer el reporte de ventas del evento | Sí |
+| Boletas | `GET /ordenes/{id}/boletas` | Leer las boletas de una orden pagada | No |
+| Boletas | `GET /boletas/{codigo}` | Leer una boleta por el código de su QR | No |
+| Validaciones | `POST /eventos/{id}/validaciones` | Validar un código en la puerta: aceptada o rechazada | Sí |
+| Validaciones | `GET /eventos/{id}/validaciones` | Leer las lecturas de la puerta | Sí |
 
 ## Validación y errores
 
@@ -137,13 +164,18 @@ misma forma:
 | 401 | Falta el token o no sirve (`no_autenticado`), o el correo o la clave no coinciden (`credenciales_invalidas`). |
 | 403 | El recurso es de otro organizador (`sin_permiso`). |
 | 404 | El recurso no existe. |
-| 409 | Choca con el estado actual: correo ya registrado, otra persona guardó antes (`conflicto_de_version`), transición de estado no permitida… |
-| 422 | Los datos rompen una regla del negocio: fechas incoherentes, cupos que superan el aforo, precio en un evento gratuito… |
+| 409 | Choca con el estado actual: correo ya registrado, otra persona guardó antes (`conflicto_de_version`), transición no permitida, cupo insuficiente, venta cerrada, orden ya pagada… |
+| 422 | Los datos rompen una regla del negocio: fechas incoherentes, cupos que superan el aforo, precio en un evento gratuito, falta la cédula en un evento +18, más boletas que el máximo por compra… |
 
 Los tipos de boleta cumplen las reglas del evento: la suma de sus cupos no
 supera el aforo, en un evento gratuito valen $0, la venta termina a más tardar al
 cierre del evento y el cupo nunca baja de lo ya vendido. Cuando ningún tipo tiene
 cupo, el evento pasa solo a `agotado`, y vuelve a `publicado` si se agrega cupo.
+
+Las órdenes reservan el cupo con una actualización condicional dentro de la
+misma transacción, así que nunca hay sobreventa; si no se pagan en 15 minutos,
+expiran y liberan el cupo. En la puerta, una boleta entra una sola vez aunque dos
+celulares la lean al mismo tiempo.
 
 Los eventos usan **bloqueo optimista**: cada edición envía la `version` que
 leyó; si otra persona guardó antes, la API responde 409 en lugar de pisar el
@@ -156,17 +188,20 @@ cambio (decisión D-10). Los listados devuelven el total en la cabecera
 apparchar-/
 ├── servidor/                  Backend (Node.js + Express)
 │   ├── index.js               Arranque: base de datos, tablas y puerto
+│   ├── demo.js                npm run demo: datos de demostración y arranque
 │   ├── app.js                 Middlewares, Swagger UI, rutas y errores
 │   ├── config.js              Variables de entorno (.env)
 │   ├── rutas.js               Rutas de cada módulo
 │   ├── tareas.js              Tareas automáticas del sistema
-│   ├── db/                    Conexión (PostgreSQL o PGlite) y esquema SQL
+│   ├── db/                    Conexión (PostgreSQL o PGlite), esquema SQL y semilla
 │   ├── comun/                 Autenticación JWT, validación, errores, formatos
 │   └── modulos/               Un módulo por recurso: rutas.js + servicio.js
 ├── pruebas/                   Pruebas automáticas (node --test + supertest)
+├── postman/                   Colección de Postman del MVP
 ├── api/openapi.yaml           Contrato de la API (OpenAPI 3.1)
 ├── web/                       Prototipo navegable (HTML, CSS y JavaScript)
-├── docs/                      Modelo de datos, decisiones, wireframes y evidencias
+├── docs/                      Modelo de datos, decisiones, wireframes, evidencias
+│                              y guion de la demostración (demo-mvp.md)
 ├── scripts/                   Verificador de coherencia y prueba del DDL
 ├── .env.example               Variables de entorno (solo nombres)
 └── .github/                   Revisión automática de cada pull request
@@ -185,6 +220,16 @@ npm run web    # http://localhost:8080
 
 Todavía lee los datos de ejemplo de `web/datos/ejemplo.json`; conectarlo a la API
 es el paso siguiente al MVP.
+
+## Demostración con Postman
+
+Con el backend corriendo (`npm run api` o `npm run demo`), importa
+[`postman/apparchar-mvp.postman_collection.json`](postman/apparchar-mvp.postman_collection.json)
+y pulsa **Run collection**: recorre el registro, el inicio de sesión, el CRUD de
+los cuatro recursos, el pago, las boletas y la puerta, con sus casos de error.
+Cada petición guarda en variables lo que necesita la siguiente. También corre
+desde la terminal con Newman (la primera vez `npx` lo descarga, así que necesita
+internet): `npx newman run postman/apparchar-mvp.postman_collection.json`.
 
 ## Otras verificaciones
 

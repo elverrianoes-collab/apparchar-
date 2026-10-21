@@ -9,10 +9,38 @@ import { manejarErrores, rutaNoEncontrada } from './comun/errores.js';
 import { crearRutas } from './rutas.js';
 
 // El contrato que muestra /docs apunta a este mismo servidor, para que el botón
-// «Try it out» de Swagger UI pruebe el backend real.
+// «Try it out» de Swagger UI pruebe el backend real. A los parámetros se les
+// quitan los ejemplos: Swagger UI los llenaría solos con ids y filtros del
+// contrato que no existen en la base (los ejemplos de los cuerpos se conservan).
+function sinEjemplosEnParametros(paths) {
+  const copia = structuredClone(paths);
+  for (const metodos of Object.values(copia)) {
+    for (const op of Object.values(metodos)) {
+      for (const parametro of op.parameters || []) {
+        delete parametro.example;
+        delete parametro.examples;
+        if (parametro.schema) {
+          delete parametro.schema.example;
+          delete parametro.schema.examples;
+        }
+      }
+    }
+  }
+  return copia;
+}
+
 const contratoParaDocs = {
   ...contrato,
   servers: [{ url: '/', description: 'Este servidor (backend del MVP)' }],
+  paths: sinEjemplosEnParametros(contrato.paths),
+  components: {
+    ...contrato.components,
+    parameters: Object.fromEntries(Object.entries(contrato.components.parameters).map(([nombre, p]) => {
+      const { example: _e, examples: _es, ...resto } = p;
+      const { example: _se, examples: _ses, ...esquema } = resto.schema || {};
+      return [nombre, { ...resto, schema: esquema }];
+    })),
+  },
 };
 
 export function crearApp({ db }) {

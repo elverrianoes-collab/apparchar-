@@ -1,0 +1,250 @@
+# Colección de Postman ejecutada con Newman contra el backend real
+# 2026-10-18 · npm run api con DATABASE_URL (PostgreSQL 16) · newman run postman/apparchar-mvp.postman_collection.json
+
+newman
+
+API de Apparchar · MVP
+
+❏ 0 · Salud
+↳ Salud del servidor
+  GET http://localhost:3000/salud [200 OK, 325B, 27ms]
+  ✓  Responde 200
+  ✓  La base responde
+
+❏ 1 · Autenticación y organizadores
+↳ Registrar organizador (crear)
+  POST http://localhost:3000/organizadores [201 Created, 608B, 111ms]
+  ✓  Responde 201
+  ✓  La clave no vuelve en la respuesta
+
+↳ Registrar con datos inválidos (400)
+  POST http://localhost:3000/organizadores [400 Bad Request, 1.02kB, 5ms]
+  ✓  Responde 400
+  ✓  El código de error es solicitud_invalida
+  ✓  Dice qué campo falló
+
+↳ Registrar el mismo correo otra vez (409)
+  POST http://localhost:3000/organizadores [409 Conflict, 443B, 91ms]
+  ✓  Responde 409
+  ✓  El código de error es correo_ya_registrado
+
+↳ Iniciar sesión (obtener el token)
+  POST http://localhost:3000/sesiones [200 OK, 972B, 101ms]
+  ✓  Responde 200
+  ✓  Entrega un token Bearer
+
+↳ Iniciar sesión con la clave equivocada (401)
+  POST http://localhost:3000/sesiones [401 Unauthorized, 451B, 81ms]
+  ✓  Responde 401
+  ✓  El código de error es credenciales_invalidas
+
+↳ Ver perfil público (leer)
+  GET http://localhost:3000/organizadores/b7aa28a1-8d54-48ca-838b-a80fcb6d4e17 [200 OK, 379B, 3ms]
+  ✓  Responde 200
+  ✓  No expone el correo
+
+↳ Editar mi cuenta (actualizar)
+  PATCH http://localhost:3000/organizadores/b7aa28a1-8d54-48ca-838b-a80fcb6d4e17 [200 OK, 540B, 8ms]
+  ✓  Responde 200
+  ✓  Cambió el teléfono
+
+↳ Editar sin token (401)
+  PATCH http://localhost:3000/organizadores/b7aa28a1-8d54-48ca-838b-a80fcb6d4e17 [401 Unauthorized, 401B, 4ms]
+  ✓  Responde 401
+  ✓  El código de error es no_autenticado
+
+❏ 2 · Eventos
+↳ Crear evento en borrador con dos tipos (crear)
+  POST http://localhost:3000/eventos [201 Created, 2.03kB, 14ms]
+  ✓  Responde 201
+  ✓  Nace en borrador con version 1
+
+↳ Crear evento con el cierre antes del inicio (422)
+  POST http://localhost:3000/eventos [422 Unprocessable Entity, 536B, 4ms]
+  ✓  Responde 422
+  ✓  El código de error es fechas_incoherentes
+
+↳ Crear evento sin token (401)
+  POST http://localhost:3000/eventos [401 Unauthorized, 401B, 2ms]
+  ✓  Responde 401
+
+↳ Publicar el evento (actualizar estado)
+  PATCH http://localhost:3000/eventos/ea51cea9-470f-4241-a8b2-3d50f4033499 [200 OK, 1.96kB, 8ms]
+  ✓  Responde 200
+  ✓  Quedó publicado y subió la versión
+
+↳ Editar con una versión vieja (409)
+  PATCH http://localhost:3000/eventos/ea51cea9-470f-4241-a8b2-3d50f4033499 [409 Conflict, 473B, 5ms]
+  ✓  Responde 409
+  ✓  El código de error es conflicto_de_version
+
+↳ Consultar la cartelera de Yopal (leer)
+  GET http://localhost:3000/eventos?municipio=Yopal&categoria=concierto [200 OK, 1.98kB, 6ms]
+  ✓  Responde 200
+  ✓  Trae el total en X-Total-Count
+  ✓  El evento publicado aparece
+
+↳ Ver el detalle del evento (leer)
+  GET http://localhost:3000/eventos/ea51cea9-470f-4241-a8b2-3d50f4033499 [200 OK, 1.96kB, 4ms]
+  ✓  Responde 200
+
+↳ Mis eventos (panel del organizador)
+  GET http://localhost:3000/organizadores/b7aa28a1-8d54-48ca-838b-a80fcb6d4e17/eventos [200 OK, 1.98kB, 10ms]
+  ✓  Responde 200
+
+❏ 3 · Tipos de boleta
+↳ Agregar la Mesa VIP (crear)
+  POST http://localhost:3000/eventos/ea51cea9-470f-4241-a8b2-3d50f4033499/tipos-boleta [201 Created, 775B, 8ms]
+  ✓  Responde 201
+
+↳ Agregar un tipo que supera el aforo (422)
+  POST http://localhost:3000/eventos/ea51cea9-470f-4241-a8b2-3d50f4033499/tipos-boleta [422 Unprocessable Entity, 500B, 4ms]
+  ✓  Responde 422
+  ✓  El código de error es aforo_excedido
+
+↳ Ver un tipo de boleta (leer)
+  GET http://localhost:3000/tipos-boleta/baea0196-3aef-4f45-ba88-22a447ffbee6 [200 OK, 708B, 3ms]
+  ✓  Responde 200
+
+↳ Cambiar el precio de la General (actualizar)
+  PATCH http://localhost:3000/tipos-boleta/023436e2-b074-4106-b11f-85f51493831b [200 OK, 678B, 9ms]
+  ✓  Responde 200
+  ✓  Nuevo precio
+
+↳ Borrar la Mesa VIP sin ventas (eliminar)
+  DELETE http://localhost:3000/tipos-boleta/baea0196-3aef-4f45-ba88-22a447ffbee6 [204 No Content, 180B, 6ms]
+  ✓  Responde 204
+
+❏ 4 · Órdenes y boletas
+↳ Comprar sin cédula en un evento +18 (422)
+  POST http://localhost:3000/ordenes [422 Unprocessable Entity, 565B, 10ms]
+  ✓  Responde 422
+  ✓  El código de error es documento_requerido
+
+↳ Comprar dos boletas (crear orden)
+  POST http://localhost:3000/ordenes [201 Created, 1.42kB, 16ms]
+  ✓  Responde 201
+  ✓  Pendiente y con el total calculado por el servidor
+
+↳ Corregir el correo de la orden (actualizar)
+  PATCH http://localhost:3000/ordenes/234f814a-7e84-40e6-9038-e37aeee45628 [200 OK, 1.36kB, 6ms]
+  ✓  Responde 200
+
+↳ Confirmar el pago (lo llama la pasarela)
+  POST http://localhost:3000/ordenes/234f814a-7e84-40e6-9038-e37aeee45628/pago [200 OK, 1.4kB, 8ms]
+  ✓  Responde 200
+  ✓  Orden pagada
+
+↳ Confirmar el pago sin la clave de la pasarela (401)
+  POST http://localhost:3000/ordenes/234f814a-7e84-40e6-9038-e37aeee45628/pago [401 Unauthorized, 402B, 2ms]
+  ✓  Responde 401
+
+↳ Ver la orden (leer)
+  GET http://localhost:3000/ordenes/234f814a-7e84-40e6-9038-e37aeee45628 [200 OK, 1.4kB, 3ms]
+  ✓  Responde 200
+
+↳ Ver las boletas de la orden
+  GET http://localhost:3000/ordenes/234f814a-7e84-40e6-9038-e37aeee45628/boletas [200 OK, 972B, 4ms]
+  ✓  Responde 200
+  ✓  Una boleta por unidad comprada
+
+↳ Ver una boleta por su código
+  GET http://localhost:3000/boletas/KH8G-J3YA-Q3W4 [200 OK, 617B, 2ms]
+  ✓  Responde 200
+
+↳ Reporte de ventas del evento
+  GET http://localhost:3000/eventos/ea51cea9-470f-4241-a8b2-3d50f4033499/ordenes [200 OK, 1.42kB, 5ms]
+  ✓  Responde 200
+
+↳ Comprar otra orden para anularla
+  POST http://localhost:3000/ordenes [201 Created, 1.15kB, 8ms]
+  ✓  Responde 201
+
+↳ Anular la orden pendiente (eliminar)
+  DELETE http://localhost:3000/ordenes/71128023-d31a-4e84-8def-75e356d31c84 [204 No Content, 180B, 6ms]
+  ✓  Responde 204
+
+↳ Anular una orden pagada (409)
+  DELETE http://localhost:3000/ordenes/234f814a-7e84-40e6-9038-e37aeee45628 [409 Conflict, 390B, 4ms]
+  ✓  Responde 409
+  ✓  El código de error es orden_no_pendiente
+
+❏ 5 · Validación en la puerta
+↳ Crear un evento que empieza en una hora
+  POST http://localhost:3000/eventos [201 Created, 1.57kB, 6ms]
+  ✓  Responde 201
+
+↳ Publicar el evento de esta noche
+  PATCH http://localhost:3000/eventos/9c67c678-2268-43cd-be52-82325ec262a1 [200 OK, 1.51kB, 6ms]
+  ✓  Responde 200
+
+↳ Comprar una boleta para esta noche
+  POST http://localhost:3000/ordenes [201 Created, 1.14kB, 6ms]
+  ✓  Responde 201
+
+↳ Pagar la boleta de esta noche
+  POST http://localhost:3000/ordenes/572fc3fe-d02c-4085-8069-ef87cfa977ce/pago [200 OK, 1.12kB, 5ms]
+  ✓  Responde 200
+
+↳ Obtener el código de la boleta
+  GET http://localhost:3000/ordenes/572fc3fe-d02c-4085-8069-ef87cfa977ce/boletas [200 OK, 638B, 4ms]
+  ✓  Responde 200
+
+↳ Validar la boleta en la puerta (entra)
+  POST http://localhost:3000/eventos/9c67c678-2268-43cd-be52-82325ec262a1/validaciones [201 Created, 691B, 7ms]
+  ✓  Responde 201
+  ✓  Aceptada
+
+↳ Validar la misma boleta otra vez (rechazada)
+  POST http://localhost:3000/eventos/9c67c678-2268-43cd-be52-82325ec262a1/validaciones [201 Created, 698B, 7ms]
+  ✓  Responde 201
+  ✓  Rechazada por ya usada
+
+↳ Validar un código que no existe (rechazada)
+  POST http://localhost:3000/eventos/9c67c678-2268-43cd-be52-82325ec262a1/validaciones [201 Created, 665B, 5ms]
+  ✓  Responde 201
+  ✓  Rechazada por no existir
+
+↳ Ver las lecturas de la puerta
+  GET http://localhost:3000/eventos/9c67c678-2268-43cd-be52-82325ec262a1/validaciones [200 OK, 1.5kB, 4ms]
+  ✓  Responde 200
+  ✓  Tres lecturas
+
+❏ 6 · Borrar
+↳ Crear un borrador para borrarlo
+  POST http://localhost:3000/eventos [201 Created, 1.16kB, 7ms]
+  ✓  Responde 201
+
+↳ Borrar el borrador (eliminar evento)
+  DELETE http://localhost:3000/eventos/c293154a-10f6-47f8-8c75-127e985f7673 [204 No Content, 180B, 4ms]
+  ✓  Responde 204
+
+↳ Borrar un evento publicado (409)
+  DELETE http://localhost:3000/eventos/ea51cea9-470f-4241-a8b2-3d50f4033499 [409 Conflict, 472B, 27ms]
+  ✓  Responde 409
+  ✓  El código de error es evento_no_eliminable
+
+↳ Borrar mi cuenta teniendo eventos (409)
+  DELETE http://localhost:3000/organizadores/b7aa28a1-8d54-48ca-838b-a80fcb6d4e17 [409 Conflict, 429B, 4ms]
+  ✓  Responde 409
+  ✓  El código de error es organizador_con_eventos
+
+┌─────────────────────────┬───────────────────┬──────────────────┐
+│                         │          executed │           failed │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│              iterations │                 1 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│                requests │                47 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│            test-scripts │                47 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│      prerequest-scripts │                 5 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│              assertions │                76 │                0 │
+├─────────────────────────┴───────────────────┴──────────────────┤
+│ total run duration: 1366ms                                     │
+├────────────────────────────────────────────────────────────────┤
+│ total data received: 28.46kB (approx)                          │
+├────────────────────────────────────────────────────────────────┤
+│ average response time: 14ms [min: 2ms, max: 111ms, s.d.: 25ms] │
+└────────────────────────────────────────────────────────────────┘
