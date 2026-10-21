@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cartelera de eventos en Casanare · Apparchar</title>
+  <meta name="description" content="Conciertos, fiestas, teatro, ferias y carreras en Yopal y el resto de Casanare. Compra tu boleta con QR y entra sin filas. Prototipo académico con datos de ejemplo.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap">
+  <link rel="stylesheet" href="css/estilos.css">
+  <script src="js/app.js" defer></script>
+</head>
+<body data-pagina="cartelera">
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+
+  <header class="cabecera zona-oscura">
+    <p class="aviso-prototipo">
+      <span class="contenedor">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+        <span>Prototipo académico (Tecnologías Web 2026-B, Unitrópico). Los eventos, organizadores y compras son datos de ejemplo: aquí no se venden boletas reales.</span>
+      </span>
+    </p>
+    <div class="contenedor cabecera__barra">
+      <a class="marca" href="index.html">
+        <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M8 18a4 4 0 0 1 4-4h40a4 4 0 0 1 4 4v8a6 6 0 0 0 0 12v8a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4v-8a6 6 0 0 0 0-12z" fill="#fbbf24"/><path d="M40 18v5M40 29v6M40 41v5" stroke="#0f172a" stroke-width="3" stroke-linecap="round"/><rect x="16" y="23" width="14" height="14" rx="2" fill="none" stroke="#0f172a" stroke-width="3"/><rect x="21" y="28" width="4" height="4" fill="#0f172a"/></svg>
+        <span>Apparchar</span>
+      </a>
+      <nav class="menu" aria-label="Principal">
+        <ul>
+          <li><a href="index.html" aria-current="page">Cartelera</a></li>
+          <li><a href="publicar.html">Publicar evento</a></li>
+          <li><a href="puerta.html">Validar en puerta</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="contenido" tabindex="-1">
+    <section class="portada zona-oscura" aria-labelledby="titulo-pagina">
+      <div class="contenedor">
+        <h1 id="titulo-pagina">Eventos en Casanare</h1>
+        <p class="portada__bajada">Compra tu boleta con QR y entra sin filas.</p>
+        <div class="panel">
+          <form role="search" id="form-filtros" class="filtros" aria-label="Filtrar eventos">
+            <div class="campo campo--busqueda">
+              <label for="filtro-q">Buscar por nombre o lugar</label>
+              <input type="search" id="filtro-q" name="q" autocomplete="off" enterkeyhint="search">
+            </div>
+            <div class="campo">
+              <label for="filtro-municipio">Municipio</label>
+              <select id="filtro-municipio" name="municipio">
+                <option value="">Todos los municipios</option>
+              </select>
+            </div>
+            <div class="campo">
+              <label for="filtro-categoria">Categoría</label>
+              <select id="filtro-categoria" name="categoria">
+                <option value="">Todas las categorías</option>
+                <option value="concierto">Concierto</option>
+                <option value="fiesta">Fiesta</option>
+                <option value="conferencia">Conferencia</option>
+                <option value="deportes">Deportes</option>
+                <option value="teatro">Teatro</option>
+                <option value="festival">Festival</option>
+                <option value="otro">Otro</option>
+              </select>
+            </div>
+            <div class="campo">
+              <label for="filtro-desde">Desde</label>
+              <input type="date" id="filtro-desde" name="desde">
+            </div>
+            <div class="filtros__acciones">
+              <button type="button" class="boton boton--secundario" id="limpiar-filtros">Limpiar filtros</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section class="seccion" aria-labelledby="titulo-lista">
+      <div class="contenedor">
+        <div class="seccion__cabeza">
+          <h2 id="titulo-lista" tabindex="-1">Próximos eventos</h2>
+          <p id="conteo" class="conteo-resultados" aria-live="polite"></p>
+        </div>
+        <div id="estado-cartelera">
+          <div class="estado estado--cargando" role="status">
+            <span class="girador" aria-hidden="true"></span>
+            <p>Cargando…</p>
+          </div>
+        </div>
+        <ul id="lista-eventos" class="grilla" aria-busy="true" aria-labelledby="titulo-lista">
+          <li aria-hidden="true"><div class="esqueleto"><div class="esqueleto__franja"></div><div class="esqueleto__cuerpo"><div class="esqueleto__linea esqueleto__linea--corta"></div><div class="esqueleto__linea esqueleto__linea--titulo"></div><div class="esqueleto__linea"></div><div class="esqueleto__linea esqueleto__linea--corta"></div></div></div></li>
+          <li aria-hidden="true"><div class="esqueleto"><div class="esqueleto__franja"></div><div class="esqueleto__cuerpo"><div class="esqueleto__linea esqueleto__linea--corta"></div><div class="esqueleto__linea esqueleto__linea--titulo"></div><div class="esqueleto__linea"></div><div class="esqueleto__linea esqueleto__linea--corta"></div></div></div></li>
+          <li aria-hidden="true"><div class="esqueleto"><div class="esqueleto__franja"></div><div class="esqueleto__cuerpo"><div class="esqueleto__linea esqueleto__linea--corta"></div><div class="esqueleto__linea esqueleto__linea--titulo"></div><div class="esqueleto__linea"></div><div class="esqueleto__linea esqueleto__linea--corta"></div></div></div></li>
+          <li aria-hidden="true"><div class="esqueleto"><div class="esqueleto__franja"></div><div class="esqueleto__cuerpo"><div class="esqueleto__linea esqueleto__linea--corta"></div><div class="esqueleto__linea esqueleto__linea--titulo"></div><div class="esqueleto__linea"></div><div class="esqueleto__linea esqueleto__linea--corta"></div></div></div></li>
+          <li aria-hidden="true"><div class="esqueleto"><div class="esqueleto__franja"></div><div class="esqueleto__cuerpo"><div class="esqueleto__linea esqueleto__linea--corta"></div><div class="esqueleto__linea esqueleto__linea--titulo"></div><div class="esqueleto__linea"></div><div class="esqueleto__linea esqueleto__linea--corta"></div></div></div></li>
+          <li aria-hidden="true"><div class="esqueleto"><div class="esqueleto__franja"></div><div class="esqueleto__cuerpo"><div class="esqueleto__linea esqueleto__linea--corta"></div><div class="esqueleto__linea esqueleto__linea--titulo"></div><div class="esqueleto__linea"></div><div class="esqueleto__linea esqueleto__linea--corta"></div></div></div></li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="pie zona-oscura">
+    <div class="contenedor">
+      <nav aria-label="Estados del prototipo">
+        <p class="pie__titulo">Estados del prototipo</p>
+        <ul>
+          <li><a href="index.html?simular=cargando">Cartelera cargando</a></li>
+          <li><a href="index.html?simular=vacio">Cartelera vacía</a></li>
+          <li><a href="index.html?simular=error">Cartelera con error</a></li>
+          <li><a href="detalle.html?evento=evento-que-no-existe">Evento que no existe</a></li>
+          <li><a href="publicar.html?simular=error">Publicar con error de red</a></li>
+        </ul>
+      </nav>
+      <p>Datos de ejemplo: eventos, organizadores y precios ficticios en municipios reales de Casanare. Fecha del prototipo: jueves 1 de octubre de 2026.</p>
+      <p>© 2026 Apparchar · Proyecto de Tecnologías Web, Unitrópico</p>
+    </div>
+  </footer>
+</body>
+</html>

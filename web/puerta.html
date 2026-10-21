@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Validar boletas en la puerta · Apparchar</title>
+  <meta name="description" content="Pantalla del portero: digita el código de la boleta y sabe al instante si la persona puede entrar. Cada boleta entra una sola vez. Prototipo académico con datos de ejemplo.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap">
+  <link rel="stylesheet" href="css/estilos.css">
+  <script src="js/app.js" defer></script>
+</head>
+<body data-pagina="puerta">
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+
+  <header class="cabecera zona-oscura">
+    <p class="aviso-prototipo">
+      <span class="contenedor">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+        <span>Prototipo académico (Tecnologías Web 2026-B, Unitrópico). Los eventos, organizadores y compras son datos de ejemplo: aquí no se venden boletas reales.</span>
+      </span>
+    </p>
+    <div class="contenedor cabecera__barra">
+      <a class="marca" href="index.html">
+        <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M8 18a4 4 0 0 1 4-4h40a4 4 0 0 1 4 4v8a6 6 0 0 0 0 12v8a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4v-8a6 6 0 0 0 0-12z" fill="#fbbf24"/><path d="M40 18v5M40 29v6M40 41v5" stroke="#0f172a" stroke-width="3" stroke-linecap="round"/><rect x="16" y="23" width="14" height="14" rx="2" fill="none" stroke="#0f172a" stroke-width="3"/><rect x="21" y="28" width="4" height="4" fill="#0f172a"/></svg>
+        <span>Apparchar</span>
+      </a>
+      <nav class="menu" aria-label="Principal">
+        <ul>
+          <li><a href="index.html">Cartelera</a></li>
+          <li><a href="publicar.html">Publicar evento</a></li>
+          <li><a href="puerta.html" aria-current="page">Validar en puerta</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="contenido" tabindex="-1">
+    <div class="zona-oscura">
+      <div class="contenedor encabezado-pagina">
+        <h1>Validar boletas en la puerta</h1>
+        <p>Digita el código impreso debajo del QR. Cada boleta entra una sola vez.</p>
+        <p class="letra-pequena">En el sistema real la puerta recibe lecturas desde 6 horas antes del inicio hasta el cierre del evento; este prototipo omite esa ventana para que puedas probarlo hoy.</p>
+      </div>
+    </div>
+
+    <div class="contenedor">
+      <div id="estado-puerta" class="mt-5">
+        <div class="estado estado--cargando" role="status">
+          <span class="girador" aria-hidden="true"></span>
+          <p>Cargando…</p>
+        </div>
+        <div class="esqueleto" aria-hidden="true"><div class="esqueleto__cuerpo"><div class="esqueleto__linea esqueleto__linea--corta"></div><div class="esqueleto__linea esqueleto__linea--titulo"></div><div class="esqueleto__linea esqueleto__linea--corta"></div><div class="esqueleto__linea esqueleto__linea--titulo"></div><div class="esqueleto__linea"></div></div></div>
+      </div>
+
+      <div id="puerta-app" class="puerta-rejilla" hidden>
+        <div class="panel">
+          <form id="form-validar" data-entidad="validacion" novalidate>
+            <div id="errores-validar" class="resumen-errores" tabindex="-1" hidden>
+              <h2 class="resumen-errores__titulo" id="errores-validar-titulo">Revisa los campos antes de validar</h2>
+              <ul></ul>
+            </div>
+            <p class="texto-secundario">Todos los campos son obligatorios.</p>
+            <div class="rejilla-campos">
+              <div class="campo campo--ancho">
+                <label for="validar-evento">Evento</label>
+                <select id="validar-evento" required name="evento_id"></select>
+              </div>
+              <div class="campo campo--ancho">
+                <label for="validar-codigo">Código de la boleta</label>
+                <input type="text" id="validar-codigo" required name="codigo_leido" class="codigo" maxlength="64" autocomplete="off" spellcheck="false" autocapitalize="characters" aria-describedby="validar-codigo-ayuda">
+                <p class="ayuda" id="validar-codigo-ayuda">12 caracteres, por ejemplo 956T-X8KV-CHV3.</p>
+              </div>
+              <div class="campo">
+                <label for="validar-puerta">Puerta</label>
+                <select id="validar-puerta" required name="puerta">
+                  <option value="Principal">Principal</option>
+                  <option value="Lateral">Lateral</option>
+                  <option value="VIP">VIP</option>
+                </select>
+              </div>
+              <div class="campo">
+                <label for="validar-portero">Tu nombre (portero)</label>
+                <input type="text" id="validar-portero" required name="validada_por" autocomplete="name" maxlength="120" aria-describedby="validar-portero-ayuda">
+                <p class="ayuda" id="validar-portero-ayuda">Lo recordamos mientras dure la sesión.</p>
+              </div>
+            </div>
+            <div class="acciones mt-5">
+              <button type="submit" class="boton boton--primario boton--grande boton--bloque">Validar boleta</button>
+            </div>
+          </form>
+
+          <div id="resultado" class="resultado" role="status"></div>
+
+          <details class="codigos-ejemplo">
+            <summary>Códigos de ejemplo para probar</summary>
+            <div class="codigos-ejemplo__cuerpo">
+              <p>Estos son del «Taller de fotografía de aves en los esteros»: elige ese evento arriba.</p>
+              <ul>
+                <li><span class="codigo">956T-X8KV-CHV3</span> <button type="button" class="boton boton--secundario" data-codigo="956T-X8KV-CHV3">Usar<span class="visualmente-oculto"> el código 956T-X8KV-CHV3</span></button></li>
+                <li><span class="codigo">9RRS-E74Z-B3N4</span> <button type="button" class="boton boton--secundario" data-codigo="9RRS-E74Z-B3N4">Usar<span class="visualmente-oculto"> el código 9RRS-E74Z-B3N4</span></button></li>
+                <li><span class="codigo">QH7H-BKEQ-YTZS</span> <button type="button" class="boton boton--secundario" data-codigo="QH7H-BKEQ-YTZS">Usar<span class="visualmente-oculto"> el código QH7H-BKEQ-YTZS</span></button></li>
+                <li><span class="codigo">N6WM-STE4-HH7W</span> <button type="button" class="boton boton--secundario" data-codigo="N6WM-STE4-HH7W">Usar<span class="visualmente-oculto"> el código N6WM-STE4-HH7W</span></button></li>
+                <li><span><span class="codigo">7K4P-QX2M-RT8W</span> <span class="texto-secundario letra-pequena">(no existe)</span></span> <button type="button" class="boton boton--secundario" data-codigo="7K4P-QX2M-RT8W">Usar<span class="visualmente-oculto"> el código 7K4P-QX2M-RT8W</span></button></li>
+              </ul>
+              <div id="codigos-sesion" hidden>
+                <p>Boletas que compraste en esta sesión:</p>
+                <ul id="lista-codigos-sesion"></ul>
+              </div>
+              <p class="mb-0">Valida dos veces el mismo código para ver cómo se rechaza el doble ingreso.</p>
+            </div>
+          </details>
+        </div>
+
+        <div class="panel">
+          <h2>Conteo de la puerta</h2>
+          <dl class="conteo">
+            <div><dt>Aceptadas</dt><dd id="conteo-aceptadas">0</dd></div>
+            <div><dt>Rechazadas</dt><dd id="conteo-rechazadas">0</dd></div>
+            <div><dt>Boletas vendidas del evento</dt><dd id="conteo-vendidas">0</dd></div>
+          </dl>
+
+          <h2>Últimas validaciones</h2>
+          <p id="sin-lecturas" class="texto-secundario">Todavía no hay validaciones de este evento en esta sesión.</p>
+          <ol id="lista-lecturas" class="lecturas" hidden></ol>
+          <div class="acciones">
+            <button type="button" class="boton boton--peligro" id="borrar-lecturas">Borrar las validaciones de esta sesión</button>
+          </div>
+          <p id="aviso-borrado" class="ayuda mt-4" role="status"></p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="pie zona-oscura">
+    <div class="contenedor">
+      <nav aria-label="Estados del prototipo">
+        <p class="pie__titulo">Estados del prototipo</p>
+        <ul>
+          <li><a href="index.html?simular=cargando">Cartelera cargando</a></li>
+          <li><a href="index.html?simular=vacio">Cartelera vacía</a></li>
+          <li><a href="index.html?simular=error">Cartelera con error</a></li>
+          <li><a href="detalle.html?evento=evento-que-no-existe">Evento que no existe</a></li>
+          <li><a href="publicar.html?simular=error">Publicar con error de red</a></li>
+        </ul>
+      </nav>
+      <p>Datos de ejemplo: eventos, organizadores y precios ficticios en municipios reales de Casanare. Fecha del prototipo: jueves 1 de octubre de 2026.</p>
+      <p>© 2026 Apparchar · Proyecto de Tecnologías Web, Unitrópico</p>
+    </div>
+  </footer>
+</body>
+</html>

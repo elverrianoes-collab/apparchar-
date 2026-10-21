@@ -3,7 +3,7 @@
 Plataforma web para que organizadores de eventos de Casanare vendan boletas con
 código QR y controlen el aforo en la puerta. Este repositorio contiene el
 **backend del MVP** (API REST con Node.js, Express y PostgreSQL), su contrato
-OpenAPI 3.1 y el modelo de datos.
+OpenAPI 3.1, el modelo de datos y el prototipo web navegable.
 
 **Documentación de la API:** Swagger UI en <http://localhost:3000/docs> al correr `npm run api` ·
 **Contrato:** [`api/openapi.yaml`](api/openapi.yaml) · **Modelo de datos:** [`docs/modelo-datos.md`](docs/modelo-datos.md) · **Versión:** 0.3.0 (MVP)
@@ -104,6 +104,12 @@ con el token de otro organizador, **403**.
 | Organizadores | `GET /organizadores/{id}` | Leer el perfil público | No |
 | Organizadores | `PATCH /organizadores/{id}` | Actualizar la propia cuenta | Sí |
 | Organizadores | `DELETE /organizadores/{id}` | Eliminar la propia cuenta (sin eventos) | Sí |
+| Eventos | `POST /eventos` | Crear (nace en borrador, con o sin tipos de boleta) | Sí |
+| Eventos | `GET /eventos` | Leer la cartelera: filtros `q`, `municipio`, `categoria`, `desde`, `hasta`, `slug`, `orden` y paginación | No |
+| Eventos | `GET /eventos/{id}` | Leer el detalle (el dueño también ve sus borradores) | Opcional |
+| Eventos | `PATCH /eventos/{id}` | Actualizar: editar, publicar, pausar o cancelar, con `version` | Sí |
+| Eventos | `DELETE /eventos/{id}` | Eliminar un borrador | Sí |
+| Eventos | `GET /organizadores/{id}/eventos` | Leer «Mis eventos» (panel del organizador) | Sí |
 
 ## Validación y errores
 
@@ -127,8 +133,13 @@ misma forma:
 | 401 | Falta el token o no sirve (`no_autenticado`), o el correo o la clave no coinciden (`credenciales_invalidas`). |
 | 403 | El recurso es de otro organizador (`sin_permiso`). |
 | 404 | El recurso no existe. |
-| 409 | Choca con el estado actual: correo ya registrado, cuenta con eventos… |
-| 422 | Los datos rompen una regla del negocio. |
+| 409 | Choca con el estado actual: correo ya registrado, otra persona guardó antes (`conflicto_de_version`), transición de estado no permitida… |
+| 422 | Los datos rompen una regla del negocio: fechas incoherentes, cupos que superan el aforo, precio en un evento gratuito… |
+
+Los eventos usan **bloqueo optimista**: cada edición envía la `version` que
+leyó; si otra persona guardó antes, la API responde 409 en lugar de pisar el
+cambio (decisión D-10). Los listados devuelven el total en la cabecera
+`X-Total-Count`.
 
 ## Qué hay en este repositorio
 
@@ -145,11 +156,26 @@ apparchar-/
 │   └── modulos/               Un módulo por recurso: rutas.js + servicio.js
 ├── pruebas/                   Pruebas automáticas (node --test + supertest)
 ├── api/openapi.yaml           Contrato de la API (OpenAPI 3.1)
+├── web/                       Prototipo navegable (HTML, CSS y JavaScript)
 ├── docs/                      Modelo de datos y decisiones de arquitectura
 ├── scripts/                   Verificador de coherencia y prueba del DDL
 ├── .env.example               Variables de entorno (solo nombres)
 └── .github/                   Revisión automática de cada pull request
 ```
+
+## Prototipo web
+
+El prototipo de la Entrega 2 (cartelera, detalle con compra, publicar evento y
+validar en la puerta) está en [`web/`](web/) y se publica en GitHub Pages con la
+acción `.github/workflows/pages.yml` (Settings → Pages → Source: GitHub Actions).
+En local:
+
+```bash
+npm run web    # http://localhost:8080
+```
+
+Todavía lee los datos de ejemplo de `web/datos/ejemplo.json`; conectarlo a la API
+es el paso siguiente al MVP.
 
 ## Otras verificaciones
 

@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Detalle del evento · Apparchar</title>
+  <meta name="description" content="Fecha, lugar, precios y compra de boletas con QR para un evento en Casanare. Prototipo académico con datos de ejemplo: el pago es simulado.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap">
+  <link rel="stylesheet" href="css/estilos.css">
+  <script src="js/app.js" defer></script>
+</head>
+<body data-pagina="detalle">
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+
+  <header class="cabecera zona-oscura">
+    <p class="aviso-prototipo">
+      <span class="contenedor">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+        <span>Prototipo académico (Tecnologías Web 2026-B, Unitrópico). Los eventos, organizadores y compras son datos de ejemplo: aquí no se venden boletas reales.</span>
+      </span>
+    </p>
+    <div class="contenedor cabecera__barra">
+      <a class="marca" href="index.html">
+        <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M8 18a4 4 0 0 1 4-4h40a4 4 0 0 1 4 4v8a6 6 0 0 0 0 12v8a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4v-8a6 6 0 0 0 0-12z" fill="#fbbf24"/><path d="M40 18v5M40 29v6M40 41v5" stroke="#0f172a" stroke-width="3" stroke-linecap="round"/><rect x="16" y="23" width="14" height="14" rx="2" fill="none" stroke="#0f172a" stroke-width="3"/><rect x="21" y="28" width="4" height="4" fill="#0f172a"/></svg>
+        <span>Apparchar</span>
+      </a>
+      <nav class="menu" aria-label="Principal">
+        <ul>
+          <li><a href="index.html">Cartelera</a></li>
+          <li><a href="publicar.html">Publicar evento</a></li>
+          <li><a href="puerta.html">Validar en puerta</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="contenido" tabindex="-1">
+    <div class="zona-oscura">
+      <div class="contenedor">
+        <nav class="migas" aria-label="Ruta de navegación">
+          <ol>
+            <li><a href="index.html">Cartelera</a></li>
+            <li><span id="miga-actual" aria-current="page">Evento</span></li>
+          </ol>
+        </nav>
+        <div class="detalle-cabeza">
+          <h1 id="titulo-evento" tabindex="-1">Cargando evento…</h1>
+          <p class="detalle-cabeza__meta" id="meta-evento" hidden></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="contenedor">
+      <div id="estado-detalle" class="mt-5">
+        <div class="estado estado--cargando" role="status">
+          <span class="girador" aria-hidden="true"></span>
+          <p>Cargando…</p>
+        </div>
+        <div class="esqueleto" aria-hidden="true"><div class="esqueleto__cuerpo"><div class="esqueleto__linea esqueleto__linea--titulo"></div><div class="esqueleto__linea"></div><div class="esqueleto__linea"></div><div class="esqueleto__linea esqueleto__linea--corta"></div><div class="esqueleto__linea"></div><div class="esqueleto__linea esqueleto__linea--corta"></div></div></div>
+      </div>
+
+      <div id="detalle-contenido" class="detalle-rejilla" hidden>
+        <div class="panel">
+          <dl class="ficha" id="ficha-evento"></dl>
+          <h2 id="titulo-sobre">Sobre el evento</h2>
+          <p class="descripcion" id="descripcion-evento"></p>
+        </div>
+
+        <section class="panel" aria-labelledby="titulo-compra">
+          <h2 id="titulo-compra">Compra tus boletas</h2>
+
+          <div id="compra-no-disponible" hidden></div>
+
+          <form id="form-compra" data-entidad="orden" novalidate>
+            <div id="errores-compra" class="resumen-errores" tabindex="-1" hidden>
+              <h3 class="resumen-errores__titulo" id="errores-compra-titulo">Revisa los campos antes de pagar</h3>
+              <ul></ul>
+            </div>
+
+            <p class="texto-secundario">Todos los campos son obligatorios, salvo los marcados como opcionales.</p>
+
+            <fieldset id="grupo-boletas">
+              <legend>1. Elige tus boletas</legend>
+              <div class="tipos" id="lista-tipos"></div>
+              <template id="plantilla-tipo">
+                <div class="tipo" data-entidad="item_orden">
+                  <input type="hidden" name="tipo_boleta_id" value="">
+                  <div class="tipo__info">
+                    <p class="tipo__nombre"></p>
+                    <p class="tipo__descripcion"></p>
+                    <p class="tipo__cifras">
+                      <span class="tipo__precio"></span>
+                      <span class="tipo__disponibles"></span>
+                      <span class="tipo__estado" hidden></span>
+                    </p>
+                  </div>
+                  <div class="campo campo--cantidad">
+                    <label class="tipo__etiqueta" for="cantidad-0">Cantidad<span class="visualmente-oculto tipo__etiqueta-nombre"></span></label>
+                    <div class="cantidad">
+                      <button type="button" class="boton boton--secundario" data-paso="-1"><span aria-hidden="true">−</span><span class="visualmente-oculto tipo__menos"></span></button>
+                      <input type="number" id="cantidad-0" name="cantidad" min="0" max="0" step="1" value="0" inputmode="numeric" aria-describedby="cantidad-0-ayuda">
+                      <button type="button" class="boton boton--secundario" data-paso="1"><span aria-hidden="true">+</span><span class="visualmente-oculto tipo__mas"></span></button>
+                    </div>
+                    <p class="ayuda" id="cantidad-0-ayuda"></p>
+                  </div>
+                </div>
+              </template>
+            </fieldset>
+
+            <fieldset>
+              <legend>2. Tus datos</legend>
+              <div class="rejilla-campos">
+                <div class="campo campo--ancho">
+                  <label for="compra-nombre">Nombre y apellido</label>
+                  <input type="text" id="compra-nombre" required name="comprador_nombre" autocomplete="name" maxlength="120" aria-describedby="compra-nombre-ayuda">
+                  <p class="ayuda" id="compra-nombre-ayuda">Así sale en tus boletas.</p>
+                </div>
+                <div class="campo campo--ancho">
+                  <label for="compra-correo">Correo electrónico</label>
+                  <input type="email" id="compra-correo" required name="comprador_correo" autocomplete="email" maxlength="254" spellcheck="false" aria-describedby="compra-correo-ayuda">
+                  <p class="ayuda" id="compra-correo-ayuda">Ahí te llegan las boletas.</p>
+                </div>
+                <div class="campo">
+                  <label for="compra-telefono">Celular</label>
+                  <input type="tel" id="compra-telefono" required name="comprador_telefono" autocomplete="tel-national" inputmode="numeric" maxlength="20" aria-describedby="compra-telefono-ayuda">
+                  <p class="ayuda" id="compra-telefono-ayuda">10 dígitos, empieza por 3.</p>
+                </div>
+                <div class="campo">
+                  <label for="compra-documento">Cédula<span class="opcional" id="compra-documento-opcional"> (opcional)</span></label>
+                  <input type="text" id="compra-documento" name="comprador_documento" inputmode="numeric" autocomplete="off" maxlength="14" aria-describedby="compra-documento-ayuda">
+                  <p class="ayuda" id="compra-documento-ayuda">Solo números, sin puntos.</p>
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset id="grupo-pago">
+              <legend>3. Medio de pago</legend>
+              <div class="grupo-opciones">
+                <div class="opcion opcion--caja">
+                  <input type="radio" id="pago-pse" name="medio_pago" value="pse">
+                  <label for="pago-pse">PSE</label>
+                </div>
+                <div class="opcion opcion--caja">
+                  <input type="radio" id="pago-nequi" name="medio_pago" value="nequi">
+                  <label for="pago-nequi">Nequi</label>
+                </div>
+                <div class="opcion opcion--caja">
+                  <input type="radio" id="pago-daviplata" name="medio_pago" value="daviplata">
+                  <label for="pago-daviplata">Daviplata</label>
+                </div>
+                <div class="opcion opcion--caja">
+                  <input type="radio" id="pago-tarjeta" name="medio_pago" value="tarjeta">
+                  <label for="pago-tarjeta">Tarjeta débito o crédito</label>
+                </div>
+              </div>
+            </fieldset>
+            <p class="nota-gratis" id="nota-gratis" hidden>Tu orden es gratuita: no necesitas medio de pago.</p>
+
+            <div class="autorizacion campo" id="campo-autoriza">
+              <div class="opcion">
+                <input type="checkbox" id="compra-autoriza" required name="autoriza_tratamiento_datos" value="true">
+                <label for="compra-autoriza">Autorizo el tratamiento de mis datos personales para gestionar esta compra (Ley 1581 de 2012).</label>
+              </div>
+            </div>
+
+            <div class="resumen-compra">
+              <h3>Resumen de tu compra</h3>
+              <ul id="lineas-resumen"></ul>
+              <p class="texto-secundario letra-pequena" id="resumen-vacio">Todavía no has elegido boletas.</p>
+              <p class="resumen-compra__total" id="total-compra" aria-live="polite">Total: $0</p>
+            </div>
+
+            <button type="submit" class="boton boton--primario boton--grande boton--bloque" id="boton-pagar">Pagar</button>
+            <p class="nota-prototipo">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+              <span>Prototipo: el pago es simulado y no se cobra nada.</span>
+            </p>
+          </form>
+
+          <div id="confirmacion-compra" class="confirmacion" hidden></div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer class="pie zona-oscura">
+    <div class="contenedor">
+      <nav aria-label="Estados del prototipo">
+        <p class="pie__titulo">Estados del prototipo</p>
+        <ul>
+          <li><a href="index.html?simular=cargando">Cartelera cargando</a></li>
+          <li><a href="index.html?simular=vacio">Cartelera vacía</a></li>
+          <li><a href="index.html?simular=error">Cartelera con error</a></li>
+          <li><a href="detalle.html?evento=evento-que-no-existe">Evento que no existe</a></li>
+          <li><a href="publicar.html?simular=error">Publicar con error de red</a></li>
+        </ul>
+      </nav>
+      <p>Datos de ejemplo: eventos, organizadores y precios ficticios en municipios reales de Casanare. Fecha del prototipo: jueves 1 de octubre de 2026.</p>
+      <p>© 2026 Apparchar · Proyecto de Tecnologías Web, Unitrópico</p>
+    </div>
+  </footer>
+</body>
+</html>
