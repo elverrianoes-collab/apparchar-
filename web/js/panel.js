@@ -948,6 +948,11 @@
     $('#limpiar-bitacora').addEventListener('click', () => $('#lista-bitacora').replaceChildren());
 
     conectar();
+    // Desde el botón «Iniciar sesión» de la cabecera (panel.html#ingresar) se llega al formulario.
+    if (location.hash === '#ingresar' && !estado.sesion) {
+      $('#form-sesion').scrollIntoView({ block: 'start' });
+      $('#sesion-correo').focus();
+    }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar);
