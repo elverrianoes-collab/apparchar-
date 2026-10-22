@@ -100,6 +100,18 @@
     const elToken = token !== undefined ? token : conToken ? estado.sesion?.token : null;
     if (elToken) headers.Authorization = `Bearer ${elToken}`;
     const inicio = performance.now();
+    // Sin API detectada no se envía nada a una ruta relativa: en GitHub Pages iría al
+    // servidor de páginas estáticas, que responde 405 con HTML. Antes se busca de nuevo
+    // por si la demostración se levantó después de abrir la página.
+    if (!estado.base) {
+      const r = await detectarApi();
+      if (r) aplicarConexion(r);
+      else {
+        const error = new ErrorApi(0, { codigo: 'sin_api', mensaje: textoSinApi() });
+        registrar({ metodo, ruta, status: 0, ms: performance.now() - inicio, cabeceras: headers, cuerpo, respuesta: error.cuerpo });
+        throw error;
+      }
+    }
     let respuesta;
     try {
       respuesta = await fetch(estado.base + ruta, { method: metodo, headers, body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo) });
@@ -115,7 +127,12 @@
     const total = respuesta.headers.get('X-Total-Count');
     registrar({ metodo, ruta, status: respuesta.status, ms, cabeceras: headers, cuerpo, respuesta: datos, total });
     if (!respuesta.ok) {
-      const error = new ErrorApi(respuesta.status, datos && typeof datos === 'object' ? datos : { codigo: 'error', mensaje: String(datos || respuesta.statusText) });
+      // Una página HTML (por ejemplo, un 404 o 405 del servidor web) no es una respuesta de la API.
+      const html = typeof datos === 'string' && /^\s*</.test(datos);
+      const cuerpoError = datos && typeof datos === 'object' ? datos
+        : html ? { codigo: 'respuesta_no_es_de_la_api', mensaje: `${estado.base} respondió HTTP ${respuesta.status} con una página web y no con la API de Apparchar. Revisar que npm run demo esté corriendo y recargar la página.` }
+          : { codigo: 'error', mensaje: String(datos || respuesta.statusText) };
+      const error = new ErrorApi(respuesta.status, cuerpoError);
       // Un token que ya no sirve (venció, o el servidor se reinició con otra clave) cierra la sesión.
       if (respuesta.status === 401 && elToken && !prueba) sesionVencida(error);
       throw error;
@@ -870,18 +887,36 @@
   }
 
   // ------------------------------------------------------------ arranque
+  // GitHub Pages (u otro hosting estático) solo sirve los archivos de web/: la API no corre ahí.
+  const PANEL_LOCAL = 'http://localhost:3000/app/panel.html';
+  const enHostingEstatico = () => location.protocol.startsWith('http') && !['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+
+  function textoSinApi() {
+    return enHostingEstatico()
+      ? `Esta copia del panel está publicada como sitio estático (${location.hostname}) y la API no corre aquí. Para usar el panel, ejecutar npm run demo en la carpeta del proyecto y abrir ${PANEL_LOCAL}.`
+      : 'No se encontró la API. En la carpeta del proyecto, ejecutar npm run demo y volver a intentarlo.';
+  }
+
+  function aplicarConexion(r) {
+    estado.base = r.base;
+    $('#conexion').className = 'conexion conexion--ok';
+    $('#conexion-texto').innerHTML = `Conectado a la API en <code>${esc(r.base)}</code> · base de datos ${r.motor === 'postgresql' ? 'PostgreSQL' : 'PostgreSQL embebido (PGlite)'} · <a href="${esc(r.base)}/docs" target="_blank" rel="noopener">Swagger UI</a>`;
+    $('#enlace-docs').href = `${r.base}/docs`;
+  }
+
   function conectar() {
     const caja = $('#conexion');
     detectarApi().then((r) => {
       if (!r) {
         caja.className = 'conexion conexion--error';
-        $('#conexion-texto').innerHTML = 'No se encontró la API. En la carpeta del proyecto, ejecutar <code>npm run demo</code> y recargar esta página (<code>http://localhost:3000/</code>).';
+        $('#conexion-texto').innerHTML = enHostingEstatico()
+          ? `Esta copia del panel está publicada como sitio estático (<code>${esc(location.hostname)}</code>) y la API no corre aquí. Para usar el panel, ejecutar <code>npm run demo</code> en la carpeta del proyecto y abrir <a href="${PANEL_LOCAL}">${PANEL_LOCAL}</a>.`
+          : 'No se encontró la API. En la carpeta del proyecto, ejecutar <code>npm run demo</code> y recargar esta página.';
+        // En el sitio estático «/docs» no existe: Swagger UI vive en la API local.
+        if (enHostingEstatico()) $('#enlace-docs').href = 'http://localhost:3000/docs';
         return;
       }
-      estado.base = r.base;
-      caja.className = 'conexion conexion--ok';
-      $('#conexion-texto').innerHTML = `Conectado a la API en <code>${esc(r.base)}</code> · base de datos ${r.motor === 'postgresql' ? 'PostgreSQL' : 'PostgreSQL embebido (PGlite)'} · <a href="${esc(r.base)}/docs" target="_blank" rel="noopener">Swagger UI</a>`;
-      $('#enlace-docs').href = `${r.base}/docs`;
+      aplicarConexion(r);
       if (estado.sesion) {
         // El token guardado se comprueba con una ruta protegida; si no sirve, se pide iniciar sesión.
         api('GET', `/organizadores/${yo().id}/eventos?por_pagina=50`).then(() => {
