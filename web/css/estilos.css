@@ -2422,3 +2422,9 @@ body[data-pagina="panel"] .contenedor {
     margin-left: 0;
   }
 }
+
+/* En el panel el encabezado va sobre el fondo claro (no dentro de .zona-oscura):
+   el texto usa el gris de fondo claro para cumplir el contraste AA (7,2:1). */
+body[data-pagina="panel"] .encabezado-pagina p {
+  color: var(--color-texto-2);
+}
