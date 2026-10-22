@@ -13,6 +13,7 @@ const app = crearApp({ db });
 const servidor = app.listen(config.puerto, () => {
   const url = `http://localhost:${config.puerto}`;
   console.log(`API de Apparchar escuchando en ${url}`);
+  console.log(`  Panel del organizador (web): ${url}/app/panel.html`);
   console.log(`  Documentación (Swagger UI): ${url}/docs`);
   console.log(`  Base de datos: ${db.motor === 'postgresql' ? 'PostgreSQL (DATABASE_URL)' : `PGlite en ${config.directorioPglite}`}${esquemaNuevo ? ' · tablas creadas' : ''}`);
   if (usaValoresDeDesarrollo) {

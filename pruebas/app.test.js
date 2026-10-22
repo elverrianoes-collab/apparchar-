@@ -28,6 +28,22 @@ describe('Documentación y salud', () => {
     assert.equal(contrato.body.servers[0].url, '/');
   });
 
+  test('el servidor publica la web en /app y un navegador que abre / llega al panel', async () => {
+    const raiz = await ctx.api.get('/').set('Accept', 'text/html,application/xhtml+xml');
+    assert.equal(raiz.status, 302);
+    assert.equal(raiz.headers.location, '/app/panel.html');
+    const panel = await ctx.api.get('/app/panel.html');
+    assert.equal(panel.status, 200);
+    assert.match(panel.headers['content-type'], /text\/html/);
+    assert.match(panel.text, /Panel del organizador/);
+    const script = await ctx.api.get('/app/js/panel.js');
+    assert.equal(script.status, 200);
+    assert.match(script.headers['content-type'], /javascript/);
+    const cartelera = await ctx.api.get('/app/');
+    assert.equal(cartelera.status, 200);
+    assert.match(cartelera.text, /panel\.html/);
+  });
+
   test('GET /salud consulta la base', async () => {
     const r = await ctx.api.get('/salud');
     assert.equal(r.status, 200);

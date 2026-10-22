@@ -7,7 +7,8 @@ OpenAPI 3.1, el modelo de datos y el prototipo web navegable.
 
 **Documentación de la API:** Swagger UI en <http://localhost:3000/docs> al correr `npm run api` ·
 **Postman:** [`postman/apparchar-mvp.postman_collection.json`](postman/apparchar-mvp.postman_collection.json) ·
-**Contrato:** [`api/openapi.yaml`](api/openapi.yaml) · **Modelo de datos:** [`docs/modelo-datos.md`](docs/modelo-datos.md) · **Versión:** 0.3.0 (MVP)
+**Contrato:** [`api/openapi.yaml`](api/openapi.yaml) · **Modelo de datos:** [`docs/modelo-datos.md`](docs/modelo-datos.md) · **Versión:** 0.3.0 (MVP) ·
+**Prototipo publicado:** <https://elverrianoes-collab.github.io/apparchar-/>
 
 ## Cumplimiento del MVP
 
@@ -17,7 +18,7 @@ OpenAPI 3.1, el modelo de datos y el prototipo web navegable.
 | **Autenticación** | Registro con clave guardada como hash bcrypt, inicio de sesión que entrega un JWT (HS256, 8 horas) y rutas protegidas con `Authorization: Bearer`: 401 sin token válido, 403 con el de otro organizador. Ver [Autenticación](#autenticación). |
 | **Validación** | Cada petición se valida contra los esquemas del contrato antes de tocar la base (400 con detalle por campo) y cada servicio aplica las reglas del negocio (409 y 422). Ver [Validación y errores](#validación-y-errores). |
 | **Documentación** | Swagger UI en `/docs`, generado del contrato OpenAPI 3.1, y una colección de Postman con 47 peticiones y 76 comprobaciones. |
-| **Demostración funcional** | `npm run demo` arranca con datos de Casanare y [`docs/demo-mvp.md`](docs/demo-mvp.md) es el guion de la prueba en vivo. Además, `npm test` corre las pruebas automáticas de toda la API. |
+| **Demostración funcional** | `npm run demo` arranca con datos de Casanare y sirve el [panel del organizador](#panel-del-organizador-conectado-a-la-api) en <http://localhost:3000/>: inicio de sesión, los cuatro CRUD y las pruebas de seguridad desde el navegador. [`docs/demo-mvp.md`](docs/demo-mvp.md) es el guion de la prueba en vivo y `npm test` corre las pruebas automáticas de toda la API. |
 
 ## El problema
 
@@ -39,11 +40,21 @@ saben cuántas quedan ni pueden detectar en la puerta una boleta falsa o repetid
 |---|---|---|
 | Freddy Sneyder Cedeño Uva | Servidor base, autenticación con JWT y CRUD de organizadores (PR 1) | [@sneyderuva](https://github.com/sneyderuva) |
 | Elver Riaño Díaz | CRUD de eventos y prototipo web (PR 2); dueño del repositorio | [@elverrianoes-collab](https://github.com/elverrianoes-collab) |
-| Javier Alberto Gómez Wilches | CRUD de tipos de boleta, wireframes y evidencias (PR 3) | _(por completar)_ |
-| Juan David Rivera Goyeneche | CRUD de órdenes, pago, validación en la puerta y demostración (PR 4) | _(por completar)_ |
+| Javier Alberto Gómez Wilches | CRUD de tipos de boleta, wireframes y evidencias (PR 3) | [@Wilcheszz](https://github.com/Wilcheszz) |
+| Juan David Rivera Goyeneche | CRUD de órdenes, pago, validación en la puerta y demostración (PR 4) | [@JuanRivera-hub](https://github.com/JuanRivera-hub) |
 
 La sustentación la presenta cualquiera de los integrantes; todos responden por el
 contenido.
+
+El MVP se integró a `main` en cuatro pull requests. Los commits de cada uno los
+hizo su autor con su propia cuenta y todos pasaron la revisión automática:
+
+| Pull request | Commits de | Aprobado por | Integrado por |
+|---|---|---|---|
+| [#1](https://github.com/elverrianoes-collab/apparchar-/pull/1) · Servidor base, autenticación con JWT y CRUD de organizadores | @sneyderuva | — | @elverrianoes-collab |
+| [#2](https://github.com/elverrianoes-collab/apparchar-/pull/2) · CRUD de eventos y prototipo web | @elverrianoes-collab | @sneyderuva | @Wilcheszz |
+| [#3](https://github.com/elverrianoes-collab/apparchar-/pull/3) · CRUD de tipos de boleta, wireframes y evidencias | @Wilcheszz | @sneyderuva | @sneyderuva |
+| [#4](https://github.com/elverrianoes-collab/apparchar-/pull/4) · CRUD de órdenes, pago, boletas y validación en la puerta | @JuanRivera-hub | @sneyderuva | @sneyderuva |
 
 ## Cómo ejecutarlo
 
@@ -66,8 +77,11 @@ mismo PostgreSQL compilado a WebAssembly, y guarda la base en `.datos/pglite`
    ```
    La consola muestra `API de Apparchar escuchando en http://localhost:3000`. La
    primera vez crea las tablas.
-3. Abre **<http://localhost:3000/docs>**: Swagger UI con todas las rutas, sus
-   esquemas y ejemplos. Con **Try it out** se prueban contra este mismo servidor.
+3. Abre **<http://localhost:3000/>**: el panel del organizador, conectado a esta
+   misma API (inicio de sesión y los cuatro CRUD desde el navegador). La
+   documentación está en **<http://localhost:3000/docs>**: Swagger UI con todas las
+   rutas, sus esquemas y ejemplos; con **Try it out** se prueban contra este mismo
+   servidor.
 4. Corre las pruebas automáticas (cada archivo arranca la API sobre una base en
    memoria, nueva y vacía):
    ```bash
@@ -199,7 +213,7 @@ apparchar-/
 ├── pruebas/                   Pruebas automáticas (node --test + supertest)
 ├── postman/                   Colección de Postman del MVP
 ├── api/openapi.yaml           Contrato de la API (OpenAPI 3.1)
-├── web/                       Prototipo navegable (HTML, CSS y JavaScript)
+├── web/                       Prototipo navegable y panel del organizador (HTML, CSS y JavaScript)
 ├── docs/                      Modelo de datos, decisiones, wireframes, evidencias
 │                              y guion de la demostración (demo-mvp.md)
 ├── scripts/                   Verificador de coherencia y prueba del DDL
@@ -211,8 +225,35 @@ apparchar-/
 
 El prototipo de la Entrega 2 (cartelera, detalle con compra, publicar evento y
 validar en la puerta) está en [`web/`](web/) y se publica en GitHub Pages con la
-acción `.github/workflows/pages.yml` (Settings → Pages → Source: GitHub Actions).
-En local:
+acción `.github/workflows/pages.yml` (Settings → Pages → Source: GitHub Actions):
+**<https://elverrianoes-collab.github.io/apparchar-/>**. Esas cuatro páginas
+simulan los datos en el navegador con `web/datos/ejemplo.json`.
+
+### Panel del organizador (conectado a la API)
+
+[`web/panel.html`](web/panel.html) es la parte de la web que trabaja contra la API
+real. El mismo backend la sirve: con `npm run demo` (o `npm run api`) corriendo, se
+abre **<http://localhost:3000/>** y el navegador llega a
+`http://localhost:3000/app/panel.html`. Ahí se muestra el MVP completo sin Swagger
+ni Postman:
+
+| Pestaña | Qué se demuestra |
+|---|---|
+| Ingreso | Registro (`POST /organizadores`) e inicio de sesión (`POST /sesiones`) con `demo@apparchar.co` / `Apparchar2026`; el token JWT se ve decodificado (algoritmo, `sub`, `iss`, `exp`). |
+| Mi cuenta | CRUD de `organizador`: leer, actualizar (solo los campos que cambian) y eliminar (409 si tiene eventos). |
+| Eventos | CRUD de `evento`: listar, crear en borrador, editar con `version` (bloqueo optimista), publicar, pausar, reanudar, cancelar y borrar borradores; la cartelera pública con `X-Total-Count`. |
+| Tipos de boleta | CRUD de `tipo_boleta` con las reglas de aforo (422) y nombre repetido (409). |
+| Órdenes | CRUD de `orden`: comprar sin cuenta, corregir y anular una orden pendiente, confirmar el pago (simulación de la pasarela) y ver las boletas emitidas. |
+| Puerta | Validar una boleta: la primera lectura entra y la segunda sale rechazada por `ya_usada`. |
+| Seguridad y validación | Seis pruebas que el servidor debe rechazar: sin token (401), firma alterada (401), recurso de otro organizador (403), datos inválidos (400), versión desactualizada (409) y aforo excedido (422). |
+
+Cada formulario muestra el error del servidor con su código y marca los campos del
+`detalles`, y la columna **Peticiones a la API** registra método, ruta, código
+HTTP, tiempo, cuerpo enviado y respuesta de cada llamada. Desde GitHub Pages el
+panel también abre, pero solo funciona si en ese computador está corriendo la API
+en `http://localhost:3000`.
+
+En local, solo las páginas estáticas:
 
 ```bash
 npm run web    # http://localhost:8080
