@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panel del organizador · Apparchar</title>
+  <meta name="description" content="Panel del organizador de Apparchar conectado a la API REST del MVP: inicio de sesión con JWT y CRUD de organizadores, eventos, tipos de boleta y órdenes.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap">
+  <link rel="stylesheet" href="css/estilos.css">
+  <script src="js/panel.js" defer></script>
+</head>
+<body data-pagina="panel">
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+
+  <header class="cabecera zona-oscura">
+    <p class="aviso-prototipo">
+      <span class="contenedor">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+        <span>MVP de Tecnologías Web 2026-B (Unitrópico). Este panel trabaja contra la API real: lo que se crea, edita o borra aquí queda guardado en la base de datos.</span>
+      </span>
+    </p>
+    <div class="contenedor cabecera__barra">
+      <a class="marca" href="index.html">
+        <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M8 18a4 4 0 0 1 4-4h40a4 4 0 0 1 4 4v8a6 6 0 0 0 0 12v8a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4v-8a6 6 0 0 0 0-12z" fill="#fbbf24"/><path d="M40 18v5M40 29v6M40 41v5" stroke="#0f172a" stroke-width="3" stroke-linecap="round"/><rect x="16" y="23" width="14" height="14" rx="2" fill="none" stroke="#0f172a" stroke-width="3"/><rect x="21" y="28" width="4" height="4" fill="#0f172a"/></svg>
+        <span>Apparchar</span>
+      </a>
+      <nav class="menu" aria-label="Principal">
+        <ul>
+          <li><a href="index.html">Cartelera</a></li>
+          <li><a href="publicar.html">Publicar evento</a></li>
+          <li><a href="puerta.html">Validar en puerta</a></li>
+          <li><a href="panel.html" aria-current="page">Panel del organizador</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="contenido" tabindex="-1">
+    <section class="encabezado-pagina" aria-labelledby="titulo-pagina">
+      <div class="contenedor">
+        <h1 id="titulo-pagina">Panel del organizador</h1>
+        <p class="ayuda">Inicio de sesión con JWT y CRUD de organizadores, eventos, tipos de boleta y órdenes sobre la API REST del MVP. Cada petición y su respuesta quedan a la vista en «Peticiones a la API».</p>
+        <div id="conexion" class="conexion conexion--pendiente" role="status">
+          <span class="conexion__punto" aria-hidden="true"></span>
+          <span id="conexion-texto">Comprobando la conexión con la API…</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="contenedor panel-rejilla">
+      <div class="panel-principal">
+
+        <!-- ============================== sin sesión -->
+        <section id="zona-ingreso" aria-labelledby="titulo-ingreso">
+          <h2 id="titulo-ingreso" class="visualmente-oculto">Ingresar</h2>
+          <div class="rejilla-dos">
+            <form id="form-sesion" class="panel" novalidate>
+              <h3 class="mt-0">Iniciar sesión</h3>
+              <p class="ayuda">POST /sesiones · el servidor verifica la clave (bcrypt) y entrega un JWT que vence en 8 horas.</p>
+              <div class="mensajes" aria-live="polite"></div>
+              <div class="campo">
+                <label for="sesion-correo">Correo</label>
+                <input id="sesion-correo" name="correo" type="email" autocomplete="username" required>
+              </div>
+              <div class="campo mt-4">
+                <label for="sesion-clave">Clave</label>
+                <input id="sesion-clave" name="clave" type="password" autocomplete="current-password" required>
+              </div>
+              <div class="acciones-panel">
+                <button class="boton boton--primario" type="submit">Ingresar</button>
+                <button class="boton boton--secundario" type="button" id="usar-demo">Usar la cuenta de demostración</button>
+              </div>
+              <p class="ayuda mt-4">Cuenta de demostración (la crea <code>npm run demo</code>): <code>demo@apparchar.co</code> · <code>Apparchar2026</code>.</p>
+            </form>
+
+            <form id="form-registro" class="panel" novalidate>
+              <h3 class="mt-0">Crear cuenta de organizador</h3>
+              <p class="ayuda">POST /organizadores · la clave se guarda como hash bcrypt, nunca en claro.</p>
+              <div class="mensajes" aria-live="polite"></div>
+              <div class="rejilla-campos">
+                <div class="campo">
+                  <label for="registro-nombre">Nombre del organizador</label>
+                  <input id="registro-nombre" name="nombre" autocomplete="organization">
+                </div>
+                <div class="campo">
+                  <label for="registro-correo">Correo</label>
+                  <input id="registro-correo" name="correo" type="email" autocomplete="email">
+                </div>
+                <div class="campo">
+                  <label for="registro-telefono">Teléfono <span class="opcional">(+57 y 10 dígitos)</span></label>
+                  <input id="registro-telefono" name="telefono" type="tel" placeholder="+573105550148" autocomplete="tel">
+                </div>
+                <div class="campo">
+                  <label for="registro-municipio">Municipio</label>
+                  <select id="registro-municipio" name="municipio" data-opciones="municipios"></select>
+                </div>
+                <div class="campo">
+                  <label for="registro-clave">Clave <span class="opcional">(mínimo 8 caracteres)</span></label>
+                  <input id="registro-clave" name="clave" type="password" autocomplete="new-password">
+                </div>
+              </div>
+              <div class="acciones-panel">
+                <button class="boton boton--primario" type="submit">Crear cuenta</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <!-- ============================== con sesión -->
+        <section id="zona-sesion" aria-labelledby="titulo-sesion" hidden>
+          <div class="panel barra-sesion">
+            <div>
+              <h2 id="titulo-sesion" class="mt-0 barra-sesion__titulo">Sesión iniciada: <span id="sesion-nombre"></span></h2>
+              <p class="ayuda" id="sesion-detalle"></p>
+            </div>
+            <div class="acciones-panel acciones-panel--fila">
+              <button class="boton boton--secundario" type="button" id="cerrar-sesion">Cerrar sesión</button>
+            </div>
+            <details class="token">
+              <summary>Ver el token JWT que entregó el servidor</summary>
+              <p class="ayuda">Viaja en cada petición protegida como <code>Authorization: Bearer …</code>. Está firmado con HS256 y la clave secreta del servidor: si alguien lo altera, la firma deja de coincidir y el servidor responde 401.</p>
+              <pre class="token__crudo codigo" id="token-crudo"></pre>
+              <dl class="token__datos" id="token-datos"></dl>
+            </details>
+          </div>
+
+          <div class="pestanas" role="tablist" aria-label="Recursos del MVP">
+            <button type="button" role="tab" id="tab-cuenta" aria-controls="p-cuenta" aria-selected="true">Mi cuenta <span class="pestanas__tabla">organizador</span></button>
+            <button type="button" role="tab" id="tab-eventos" aria-controls="p-eventos" aria-selected="false" tabindex="-1">Eventos <span class="pestanas__tabla">evento</span></button>
+            <button type="button" role="tab" id="tab-tipos" aria-controls="p-tipos" aria-selected="false" tabindex="-1">Tipos de boleta <span class="pestanas__tabla">tipo_boleta</span></button>
+            <button type="button" role="tab" id="tab-ordenes" aria-controls="p-ordenes" aria-selected="false" tabindex="-1">Órdenes <span class="pestanas__tabla">orden</span></button>
+            <button type="button" role="tab" id="tab-puerta" aria-controls="p-puerta" aria-selected="false" tabindex="-1">Puerta <span class="pestanas__tabla">validación</span></button>
+            <button type="button" role="tab" id="tab-pruebas" aria-controls="p-pruebas" aria-selected="false" tabindex="-1">Seguridad y validación <span class="pestanas__tabla">401 · 403 · 400 · 409 · 422</span></button>
+          </div>
+
+          <!-- ---------- organizador -->
+          <section id="p-cuenta" role="tabpanel" aria-labelledby="tab-cuenta" class="pestana">
+            <div class="panel">
+              <div class="panel__cabeza">
+                <h3 class="mt-0">Leer · GET /organizadores/{id}</h3>
+                <button class="boton boton--secundario boton--chico" type="button" id="leer-cuenta">Volver a leer</button>
+              </div>
+              <dl class="ficha-datos" id="cuenta-datos"></dl>
+            </div>
+
+            <form id="form-cuenta" class="panel" novalidate>
+              <h3 class="mt-0">Actualizar · PATCH /organizadores/{id}</h3>
+              <p class="ayuda">Solo se envían los campos que cambian. Con el token de otra cuenta el servidor responde 403.</p>
+              <div class="mensajes" aria-live="polite"></div>
+              <div class="rejilla-campos">
+                <div class="campo"><label for="cuenta-nombre">Nombre</label><input id="cuenta-nombre" name="nombre"></div>
+                <div class="campo"><label for="cuenta-correo">Correo</label><input id="cuenta-correo" name="correo" type="email"></div>
+                <div class="campo"><label for="cuenta-telefono">Teléfono</label><input id="cuenta-telefono" name="telefono" type="tel"></div>
+                <div class="campo"><label for="cuenta-municipio">Municipio</label><select id="cuenta-municipio" name="municipio" data-opciones="municipios"></select></div>
+                <div class="campo"><label for="cuenta-clave">Clave nueva <span class="opcional">(opcional)</span></label><input id="cuenta-clave" name="clave" type="password" autocomplete="new-password"></div>
+              </div>
+              <div class="acciones-panel"><button class="boton boton--primario" type="submit">Guardar cambios</button></div>
+            </form>
+
+            <div class="panel">
+              <h3 class="mt-0">Eliminar · DELETE /organizadores/{id}</h3>
+              <p class="ayuda">Solo se borra una cuenta sin eventos: si tiene eventos, el servidor responde 409 <code>organizador_con_eventos</code>.</p>
+              <div class="mensajes" id="mensajes-borrar-cuenta" aria-live="polite"></div>
+              <div class="acciones-panel"><button class="boton boton--peligro" type="button" id="borrar-cuenta">Borrar mi cuenta</button></div>
+            </div>
+          </section>
+
+          <!-- ---------- evento -->
+          <section id="p-eventos" role="tabpanel" aria-labelledby="tab-eventos" class="pestana" hidden>
+            <div class="panel">
+              <div class="panel__cabeza">
+                <h3 class="mt-0">Mis eventos · GET /organizadores/{id}/eventos</h3>
+                <button class="boton boton--secundario boton--chico" type="button" id="leer-eventos">Actualizar</button>
+              </div>
+              <div class="mensajes" id="mensajes-eventos" aria-live="polite"></div>
+              <div class="tabla-desplazable"><table class="tabla" id="tabla-eventos">
+                <thead><tr><th scope="col">Evento</th><th scope="col">Estado</th><th scope="col">Inicia</th><th scope="col">Aforo</th><th scope="col">Versión</th><th scope="col">Acciones</th></tr></thead>
+                <tbody></tbody>
+              </table></div>
+            </div>
+
+            <form id="form-evento-editar" class="panel" novalidate hidden>
+              <h3 class="mt-0">Actualizar · PATCH /eventos/<span id="editar-evento-id"></span></h3>
+              <p class="ayuda">Se envía la <code>version</code> que se leyó: si alguien guardó antes, el servidor responde 409 <code>conflicto_de_version</code> (bloqueo optimista).</p>
+              <div class="mensajes" aria-live="polite"></div>
+              <input type="hidden" name="version" data-numero>
+              <div class="rejilla-campos">
+                <div class="campo"><label for="ee-nombre">Nombre</label><input id="ee-nombre" name="nombre"></div>
+                <div class="campo"><label for="ee-lugar">Lugar</label><input id="ee-lugar" name="lugar"></div>
+                <div class="campo"><label for="ee-aforo">Aforo total</label><input id="ee-aforo" name="aforo_total" type="number" min="1"></div>
+                <div class="campo"><label for="ee-inicio">Inicia</label><input id="ee-inicio" name="fecha_inicio" type="datetime-local"></div>
+                <div class="campo"><label for="ee-fin">Termina</label><input id="ee-fin" name="fecha_fin" type="datetime-local"></div>
+              </div>
+              <div class="campo mt-4"><label for="ee-descripcion">Descripción</label><textarea id="ee-descripcion" name="descripcion"></textarea></div>
+              <div class="acciones-panel acciones-panel--fila">
+                <button class="boton boton--primario" type="submit">Guardar cambios</button>
+                <button class="boton boton--secundario" type="button" data-cerrar="form-evento-editar">Cerrar</button>
+              </div>
+            </form>
+
+            <form id="form-evento" class="panel" novalidate>
+              <div class="panel__cabeza">
+                <h3 class="mt-0">Crear · POST /eventos</h3>
+                <button class="boton boton--secundario boton--chico" type="button" id="ejemplo-evento">Llenar con un ejemplo</button>
+              </div>
+              <p class="ayuda">El evento nace en borrador (versión 1) y no aparece en la cartelera hasta publicarlo.</p>
+              <div class="mensajes" aria-live="polite"></div>
+              <div class="rejilla-campos">
+                <div class="campo"><label for="ev-nombre">Nombre</label><input id="ev-nombre" name="nombre"></div>
+                <div class="campo"><label for="ev-categoria">Categoría</label><select id="ev-categoria" name="categoria" data-opciones="categorias"></select></div>
+                <div class="campo"><label for="ev-lugar">Lugar</label><input id="ev-lugar" name="lugar"></div>
+                <div class="campo"><label for="ev-direccion">Dirección</label><input id="ev-direccion" name="direccion"></div>
+                <div class="campo"><label for="ev-municipio">Municipio</label><select id="ev-municipio" name="municipio" data-opciones="municipios"></select></div>
+                <div class="campo"><label for="ev-aforo">Aforo total</label><input id="ev-aforo" name="aforo_total" type="number" min="1"></div>
+                <div class="campo"><label for="ev-inicio">Inicia</label><input id="ev-inicio" name="fecha_inicio" type="datetime-local"></div>
+                <div class="campo"><label for="ev-fin">Termina</label><input id="ev-fin" name="fecha_fin" type="datetime-local"></div>
+                <div class="campo"><label for="ev-edad">Edad mínima <span class="opcional">(opcional)</span></label><input id="ev-edad" name="edad_minima" type="number" min="1" max="21"></div>
+                <div class="campo"><label for="ev-politica">Reembolsos</label><select id="ev-politica" name="politica_reembolso" data-opciones="politicas"></select></div>
+              </div>
+              <div class="campo mt-4"><label for="ev-descripcion">Descripción <span class="opcional">(mínimo 20 caracteres)</span></label><textarea id="ev-descripcion" name="descripcion"></textarea></div>
+              <div class="opcion mt-4"><input id="ev-gratuito" name="es_gratuito" type="checkbox"><label for="ev-gratuito">Evento gratuito</label></div>
+              <div class="acciones-panel"><button class="boton boton--primario" type="submit">Crear evento</button></div>
+            </form>
+
+            <div class="panel">
+              <div class="panel__cabeza">
+                <h3 class="mt-0">Cartelera pública · GET /eventos</h3>
+                <button class="boton boton--secundario boton--chico" type="button" id="leer-cartelera">Consultar</button>
+              </div>
+              <p class="ayuda">Ruta pública (sin token): solo muestra eventos publicados o agotados. El total llega en la cabecera <code>X-Total-Count</code>.</p>
+              <div id="cartelera"></div>
+            </div>
+          </section>
+
+          <!-- ---------- tipo_boleta -->
+          <section id="p-tipos" role="tabpanel" aria-labelledby="tab-tipos" class="pestana" hidden>
+            <div class="panel">
+              <div class="campo selector-evento"><label for="tipos-evento">Evento</label><select id="tipos-evento" data-selector-evento></select></div>
+              <div class="mensajes" id="mensajes-tipos" aria-live="polite"></div>
+              <div class="tabla-desplazable"><table class="tabla" id="tabla-tipos">
+                <thead><tr><th scope="col">Tipo</th><th scope="col">Precio</th><th scope="col">Vendidas</th><th scope="col">Máx. por orden</th><th scope="col">Acciones</th></tr></thead>
+                <tbody></tbody>
+              </table></div>
+            </div>
+
+            <form id="form-tipo-editar" class="panel" novalidate hidden>
+              <h3 class="mt-0">Actualizar · PATCH /tipos-boleta/<span id="editar-tipo-id"></span></h3>
+              <div class="mensajes" aria-live="polite"></div>
+              <div class="rejilla-campos">
+                <div class="campo"><label for="te-nombre">Nombre</label><input id="te-nombre" name="nombre"></div>
+                <div class="campo"><label for="te-precio">Precio (COP)</label><input id="te-precio" name="precio_cop" type="number" min="0"></div>
+                <div class="campo"><label for="te-cantidad">Cantidad total</label><input id="te-cantidad" name="cantidad_total" type="number" min="1"></div>
+                <div class="campo"><label for="te-maximo">Máximo por orden</label><input id="te-maximo" name="maximo_por_orden" type="number" min="1" max="20"></div>
+              </div>
+              <div class="acciones-panel acciones-panel--fila">
+                <button class="boton boton--primario" type="submit">Guardar cambios</button>
+                <button class="boton boton--secundario" type="button" data-cerrar="form-tipo-editar">Cerrar</button>
+              </div>
+            </form>
+
+            <form id="form-tipo" class="panel" novalidate>
+              <div class="panel__cabeza">
+                <h3 class="mt-0">Crear · POST /eventos/{id}/tipos-boleta</h3>
+                <button class="boton boton--secundario boton--chico" type="button" id="ejemplo-tipo">Llenar con un ejemplo</button>
+              </div>
+              <p class="ayuda">La suma de cupos no puede superar el aforo del evento (422 <code>aforo_excedido</code>) y el nombre no se repite en el mismo evento (409).</p>
+              <div class="mensajes" aria-live="polite"></div>
+              <div class="rejilla-campos">
+                <div class="campo"><label for="tb-nombre">Nombre</label><input id="tb-nombre" name="nombre"></div>
+                <div class="campo"><label for="tb-precio">Precio (COP)</label><input id="tb-precio" name="precio_cop" type="number" min="0"></div>
+                <div class="campo"><label for="tb-cantidad">Cantidad total</label><input id="tb-cantidad" name="cantidad_total" type="number" min="1"></div>
+                <div class="campo"><label for="tb-maximo">Máximo por orden <span class="opcional">(opcional)</span></label><input id="tb-maximo" name="maximo_por_orden" type="number" min="1" max="20"></div>
+              </div>
+              <div class="campo mt-4"><label for="tb-descripcion">Descripción <span class="opcional">(opcional)</span></label><input id="tb-descripcion" name="descripcion"></div>
+              <div class="acciones-panel"><button class="boton boton--primario" type="submit">Crear tipo de boleta</button></div>
+            </form>
+          </section>
+
+          <!-- ---------- orden -->
+          <section id="p-ordenes" role="tabpanel" aria-labelledby="tab-ordenes" class="pestana" hidden>
+            <div class="panel">
+              <div class="campo selector-evento"><label for="ordenes-evento">Evento</label><select id="ordenes-evento" data-selector-evento></select></div>
+              <div class="mensajes" id="mensajes-ordenes" aria-live="polite"></div>
+              <div class="tabla-desplazable"><table class="tabla" id="tabla-ordenes">
+                <thead><tr><th scope="col">Comprador</th><th scope="col">Estado</th><th scope="col">Total</th><th scope="col">Vence o se pagó</th><th scope="col">Acciones</th></tr></thead>
+                <tbody></tbody>
+              </table></div>
+              <div id="boletas-orden"></div>
+            </div>
+
+            <div class="panel" id="panel-pago" hidden>
+              <h3 class="mt-0">Confirmar el pago · POST /ordenes/<span id="pago-orden-id"></span>/pago</h3>
+              <p class="aviso-simulado">Simulación de la pasarela para la demostración. En producción esta llamada la hace la pasarela de pagos desde su servidor, nunca el navegador (decisión D-20).</p>
+              <div class="mensajes" id="mensajes-pago" aria-live="polite"></div>
+              <div class="rejilla-campos">
+                <div class="campo"><label for="pago-clave">Clave de la pasarela (<code>X-Clave-Pasarela</code>)</label><input id="pago-clave" value="pasarela-demo" autocomplete="off"></div>
+                <div class="campo"><label for="pago-referencia">Referencia del pago</label><input id="pago-referencia" autocomplete="off"></div>
+              </div>
+              <div class="acciones-panel acciones-panel--fila">
+                <button class="boton boton--primario" type="button" id="confirmar-pago">Confirmar pago</button>
+                <button class="boton boton--secundario" type="button" data-cerrar="panel-pago">Cerrar</button>
+              </div>
+            </div>
+
+            <form id="form-orden-editar" class="panel" novalidate hidden>
+              <h3 class="mt-0">Actualizar · PATCH /ordenes/<span id="editar-orden-id"></span></h3>
+              <p class="ayuda">Solo se corrige una orden pendiente; una pagada responde 409.</p>
+              <div class="mensajes" aria-live="polite"></div>
+              <div class="rejilla-campos">
+                <div class="campo"><label for="oe-nombre">Nombre del comprador</label><input id="oe-nombre" name="comprador_nombre"></div>
+                <div class="campo"><label for="oe-correo">Correo</label><input id="oe-correo" name="comprador_correo" type="email"></div>
+                <div class="campo"><label for="oe-telefono">Celular</label><input id="oe-telefono" name="comprador_telefono" type="tel"></div>
+                <div class="campo"><label for="oe-medio">Medio de pago</label><select id="oe-medio" name="medio_pago" data-opciones="medios"></select></div>
+              </div>
+              <div class="acciones-panel acciones-panel--fila">
+                <button class="boton boton--primario" type="submit">Guardar cambios</button>
+                <button class="boton boton--secundario" type="button" data-cerrar="form-orden-editar">Cerrar</button>
+              </div>
+            </form>
+
+            <form id="form-orden" class="panel" novalidate>
+              <div class="panel__cabeza">
+                <h3 class="mt-0">Crear · POST /ordenes</h3>
+                <button class="boton boton--secundario boton--chico" type="button" id="ejemplo-orden">Llenar con un ejemplo</button>
+              </div>
+              <p class="ayuda">Ruta pública: la usa el comprador sin cuenta. El servidor calcula el total y reserva el cupo por 15 minutos sin sobreventa.</p>
+              <div class="mensajes" aria-live="polite"></div>
+              <div class="rejilla-campos">
+                <div class="campo"><label for="or-nombre">Nombre del comprador</label><input id="or-nombre" name="comprador_nombre" autocomplete="name"></div>
+                <div class="campo"><label for="or-correo">Correo</label><input id="or-correo" name="comprador_correo" type="email" autocomplete="email"></div>
+                <div class="campo"><label for="or-telefono">Celular <span class="opcional">(+573…)</span></label><input id="or-telefono" name="comprador_telefono" type="tel" autocomplete="tel"></div>
+                <div class="campo"><label for="or-documento">Documento <span class="opcional">(obligatorio en eventos +18)</span></label><input id="or-documento" name="comprador_documento" inputmode="numeric"></div>
+                <div class="campo"><label for="or-medio">Medio de pago</label><select id="or-medio" name="medio_pago" data-opciones="medios"></select></div>
+              </div>
+              <fieldset class="items-orden mt-4">
+                <legend class="etiqueta">Boletas</legend>
+                <div id="items-orden" class="rejilla-campos"></div>
+              </fieldset>
+              <div class="opcion mt-4"><input id="or-autoriza" name="autoriza_tratamiento_datos" type="checkbox"><label for="or-autoriza">El comprador autoriza el tratamiento de sus datos personales</label></div>
+              <div class="acciones-panel"><button class="boton boton--primario" type="submit">Crear orden</button></div>
+            </form>
+          </section>
+
+          <!-- ---------- validación -->
+          <section id="p-puerta" role="tabpanel" aria-labelledby="tab-puerta" class="pestana" hidden>
+            <form id="form-puerta" class="panel" novalidate>
+              <h3 class="mt-0">Validar una boleta · POST /eventos/{id}/validaciones</h3>
+              <p class="ayuda">La puerta abre 6 horas antes del inicio. Cada boleta entra una sola vez: la segunda lectura sale rechazada por <code>ya_usada</code>.</p>
+              <div class="campo selector-evento mt-4"><label for="puerta-evento">Evento</label><select id="puerta-evento" data-selector-evento></select></div>
+              <div class="mensajes" aria-live="polite"></div>
+              <div class="rejilla-campos mt-4">
+                <div class="campo"><label for="pu-codigo">Código de la boleta</label><input id="pu-codigo" name="codigo_leido" class="codigo" placeholder="ABCD-EFGH-JKMN" autocomplete="off"></div>
+                <div class="campo"><label for="pu-puerta">Puerta</label><input id="pu-puerta" name="puerta" value="Principal"></div>
+              </div>
+              <div class="acciones-panel"><button class="boton boton--primario" type="submit">Validar</button></div>
+              <div id="resultado-puerta" aria-live="assertive"></div>
+            </form>
+            <div class="panel">
+              <div class="panel__cabeza">
+                <h3 class="mt-0">Lecturas · GET /eventos/{id}/validaciones</h3>
+                <button class="boton boton--secundario boton--chico" type="button" id="leer-lecturas">Actualizar</button>
+              </div>
+              <div class="tabla-desplazable"><table class="tabla" id="tabla-lecturas">
+                <thead><tr><th scope="col">Hora</th><th scope="col">Código</th><th scope="col">Resultado</th><th scope="col">Puerta</th></tr></thead>
+                <tbody></tbody>
+              </table></div>
+            </div>
+          </section>
+
+          <!-- ---------- pruebas -->
+          <section id="p-pruebas" role="tabpanel" aria-labelledby="tab-pruebas" class="pestana" hidden>
+            <div class="panel">
+              <div class="panel__cabeza">
+                <h3 class="mt-0">Seguridad y validación en el servidor</h3>
+                <button class="boton boton--primario boton--chico" type="button" id="correr-pruebas">Ejecutar todas</button>
+              </div>
+              <p class="ayuda">Cada prueba envía a propósito una petición que el servidor debe rechazar y compara el código HTTP con el esperado. Los detalles quedan en «Peticiones a la API».</p>
+              <ol class="pruebas" id="lista-pruebas"></ol>
+            </div>
+          </section>
+        </section>
+      </div>
+
+      <aside class="panel bitacora" aria-labelledby="titulo-bitacora">
+        <div class="panel__cabeza">
+          <h2 id="titulo-bitacora" class="mt-0 bitacora__titulo">Peticiones a la API</h2>
+          <button class="boton boton--secundario boton--chico" type="button" id="limpiar-bitacora">Limpiar</button>
+        </div>
+        <p class="ayuda">Método, ruta, código HTTP y tiempo de cada petición. Al abrir una se ven el cuerpo enviado y la respuesta del servidor.</p>
+        <ol class="bitacora__lista" id="lista-bitacora" reversed></ol>
+        <p class="ayuda mt-4"><a id="enlace-docs" href="/docs" target="_blank" rel="noopener">Documentación de la API (Swagger UI)</a></p>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="pie zona-oscura">
+    <div class="contenedor">
+      <p>Panel del MVP: cada acción llama a la API REST del backend (Node.js, Express y PostgreSQL) y respeta el contrato <code>api/openapi.yaml</code>.</p>
+      <p>© 2026 Apparchar · Proyecto de Tecnologías Web, Unitrópico</p>
+    </div>
+  </footer>
+</body>
+</html>

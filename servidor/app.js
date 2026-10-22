@@ -1,9 +1,10 @@
 // Arma la aplicación Express: middlewares, documentación, rutas y errores.
 // No abre ningún puerto (eso lo hace index.js), así las pruebas la usan directo.
+import path from 'node:path';
 import express from 'express';
 import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
-import { config } from './config.js';
+import { config, RAIZ } from './config.js';
 import { contrato } from './comun/contrato.js';
 import { manejarErrores, rutaNoEncontrada } from './comun/errores.js';
 import { crearRutas } from './rutas.js';
@@ -54,15 +55,22 @@ export function crearApp({ db }) {
   }));
   app.use(express.json({ limit: '100kb' }));
 
+  // La raíz describe la API; un navegador que la abre va directo al panel web.
   app.get('/', (req, res) => {
+    if (req.accepts(['json', 'html']) === 'html') return res.redirect('/app/panel.html');
     res.json({
       nombre: contrato.info.title,
       version: contrato.info.version,
       documentacion: '/docs',
       contrato: '/openapi.json',
       salud: '/salud',
+      aplicacion: '/app/panel.html',
     });
   });
+
+  // La web (web/) se sirve en /app desde el mismo servidor: el panel del
+  // organizador llama a la API en el mismo origen, sin CORS ni otra instalación.
+  app.use('/app', express.static(path.join(RAIZ, 'web'), { index: 'index.html', fallthrough: true }));
 
   app.get('/salud', async (req, res) => {
     await db.consultar('SELECT 1');
