@@ -2375,3 +2375,50 @@ fieldset fieldset legend {
 body[data-pagina="panel"] .contenedor {
   max-width: 92rem;
 }
+
+/* Botón de acceso de la cabecera: lleva al inicio de sesión del panel */
+.boton--acceso {
+  width: auto;
+  min-height: 2.5rem;
+  padding: var(--esp-1) var(--esp-4);
+  font-size: var(--texto-sm);
+}
+
+.boton--acceso svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+/* En la cabecera oscura el botón va delineado, para no confundirse con la
+   página actual del menú (fondo ámbar). En el celular queda junto a la marca y
+   el menú baja a su propia línea; en pantallas anchas, menú y botón a la derecha. */
+.zona-oscura .boton--acceso {
+  order: 2;
+  margin-left: auto;
+  background: transparent;
+  color: var(--color-texto-invertido);
+  border-color: var(--color-acento);
+}
+
+.zona-oscura .boton--acceso:hover {
+  background: var(--color-acento);
+  color: var(--color-base);
+}
+
+.cabecera__barra .menu {
+  order: 3;
+  width: 100%;
+}
+
+@media (min-width: 60rem) {
+  .cabecera__barra .menu {
+    order: 2;
+    width: auto;
+    margin-left: auto;
+  }
+
+  .zona-oscura .boton--acceso {
+    order: 3;
+    margin-left: 0;
+  }
+}

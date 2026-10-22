@@ -41,7 +41,7 @@ describe('Documentación y salud', () => {
     assert.match(script.headers['content-type'], /javascript/);
     const cartelera = await ctx.api.get('/app/');
     assert.equal(cartelera.status, 200);
-    assert.match(cartelera.text, /panel\.html/);
+    assert.match(cartelera.text, /href="panel\.html#ingresar"/, 'la cartelera tiene el botón «Iniciar sesión»');
   });
 
   test('GET /salud consulta la base', async () => {
