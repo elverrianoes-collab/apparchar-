@@ -1618,6 +1618,13 @@ fieldset fieldset legend {
 }
 
 /* ------------------------------------------------------------ puerta */
+/* El estado de carga ocupa el mismo lugar que la rejilla que lo reemplaza: así el
+   formulario no salta cuando llegan los datos (CLS, ver docs/informe-rendimiento.md). */
+.estado-puerta {
+  padding-block: var(--esp-6);
+  min-height: 24rem;
+}
+
 .puerta-rejilla {
   display: grid;
   gap: var(--esp-5);
