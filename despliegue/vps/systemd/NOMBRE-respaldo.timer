@@ -1,0 +1,12 @@
+# Plantilla: /etc/systemd/system/__NOMBRE__-respaldo.timer
+[Unit]
+Description=__NOMBRE__: respaldo diario de la base de datos
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+RandomizedDelaySec=15min
+Persistent=true
+Unit=__NOMBRE__-respaldo.service
+
+[Install]
+WantedBy=timers.target

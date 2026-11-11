@@ -3,11 +3,17 @@
 #
 # DOMINIO decide el modo:
 #   :80 (por defecto)      → HTTP en local, sin certificado (http://localhost:8080).
-#   apparchar.ejemplo.com  → Caddy pide y renueva solo el certificado de Let's
+#   app.ejemplo.com        → Caddy pide y renueva solo el certificado de Let's
 #                            Encrypt y sirve HTTPS (servidor propio con dominio).
 # En Render no se usa: allí el HTTPS y el balanceo los pone la plataforma.
 {
 	admin off
+	# Detrás de otro proxy en una red privada (el del VPS), Caddy conserva el
+	# X-Forwarded-For que este le manda. Desde internet no se confía en nadie:
+	# Caddy reemplaza la cabecera, así que un cliente no puede falsificar su IP.
+	servers {
+		trusted_proxies static private_ranges
+	}
 }
 
 {$DOMINIO::80} {

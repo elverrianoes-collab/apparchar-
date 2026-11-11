@@ -19,7 +19,9 @@ coverage/
 *.log
 # Archivos de operación que no van dentro de la imagen.
 compose.yaml
+compose.vps.yaml
 proxy/
+despliegue/
 render.yaml
 Dockerfile
 .dockerignore

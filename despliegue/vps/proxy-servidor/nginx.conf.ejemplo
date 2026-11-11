@@ -1,0 +1,24 @@
+# Sitio NUEVO para el subdominio del proyecto en un nginx que ya existe en el VPS.
+# No modifica ningún sitio existente: es un archivo aparte.
+#   1. Copiar como /etc/nginx/sites-available/__NOMBRE__ (o conf.d/__NOMBRE__.conf)
+#      reemplazando __SUBDOMINIO__ y __PUERTO__.
+#   2. ln -s ../sites-available/__NOMBRE__ /etc/nginx/sites-enabled/   (si aplica)
+#   3. nginx -t  &&  systemctl reload nginx        (reload, nunca restart)
+#   4. certbot --nginx -d __SUBDOMINIO__           (agrega el 443 y la redirección
+#      solo en este bloque; certbot renueva solo).
+server {
+    listen 80;
+    listen [::]:80;
+    server_name __SUBDOMINIO__;
+
+    location / {
+        proxy_pass http://127.0.0.1:__PUERTO__;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 60s;
+        client_max_body_size 1m;
+    }
+}
