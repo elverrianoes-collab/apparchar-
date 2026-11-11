@@ -1,0 +1,39 @@
+# Proxy de entrada de Apparchar (servicio «proxy» del compose). Es el único
+# contenedor publicado hacia afuera: recibe el tráfico y lo pasa a «api».
+#
+# DOMINIO decide el modo:
+#   :80 (por defecto)      → HTTP en local, sin certificado (http://localhost:8080).
+#   apparchar.ejemplo.com  → Caddy pide y renueva solo el certificado de Let's
+#                            Encrypt y sirve HTTPS (servidor propio con dominio).
+# En Render no se usa: allí el HTTPS y el balanceo los pone la plataforma.
+{
+	admin off
+}
+
+{$DOMINIO::80} {
+	# Comprime texto (HTML, CSS, JS, JSON) con zstd o gzip según lo que acepte el navegador.
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Frame-Options DENY
+		-Server
+	}
+
+	# Salud del propio proxy, para el healthcheck del compose.
+	respond /proxy-salud 200
+
+	# Hay una sola réplica de la API, cuya salud ya vigila Docker (HEALTHCHECK).
+	# Si la API se está reiniciando, Caddy reintenta hasta 15 s antes de responder
+	# 502, en vez de marcarla caída y devolver 503 hasta la siguiente revisión.
+	reverse_proxy api:3000 {
+		lb_try_duration 15s
+		lb_try_interval 250ms
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}
