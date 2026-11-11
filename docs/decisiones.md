@@ -423,3 +423,116 @@ producto «contrato primero», con PostgreSQL, y se implementará en las Entrega
 - **Descartado.** Un estado `cancelada` para las órdenes anuladas: obligaría a
   cambiar el dominio `estado_orden` y sus `CHECK`, y una compra que nunca se pagó
   no necesita quedar en el historial.
+
+## D-27 · Un solo Dockerfile multietapa para la API y la web
+
+- **Decisión.** El `Dockerfile` tiene tres etapas sobre `node:22.23.5-alpine3.24`:
+  `dependencias` (solo las de producción, con `npm ci --omit=dev` desde el
+  lockfile), `pruebas` (todas las dependencias y `npm run revisar`, para
+  `docker build --target pruebas`) y `ejecucion`, la imagen final: el código de
+  `api/`, `servidor/` y `web/`, las dependencias de producción, el usuario
+  `node` (uid 1000) y un `HEALTHCHECK` sobre `GET /salud`. El `.dockerignore`
+  deja fuera `node_modules`, `.git`, los `.env` y la documentación.
+- **Por qué.** Copiar primero `package.json` y el lockfile hace que un cambio
+  de código no reinstale dependencias (la capa se reutiliza). La imagen final no
+  lleva herramientas de desarrollo (Redocly, Prism, supertest), ni el historial,
+  ni secretos. El código queda de root y en solo lectura para el proceso: si
+  alguien compromete la API, no puede reescribirla. La versión de Node va fija
+  para que la imagen de hoy sea la misma dentro de un mes.
+- **Descartado.** Una imagen aparte para la web (por ejemplo, Nginx con `web/`):
+  la API ya sirve la web en `/app` desde el mismo origen (D-17), y una imagen más
+  sería otro servicio que construir, publicar y desplegar.
+
+## D-28 · Compose con proxy, API, base y caché; solo el proxy se publica
+
+- **Decisión.** `compose.yaml` define `proxy` (Caddy 2), `api`, `db`
+  (PostgreSQL 17) y `cache` (Valkey 8). Solo `proxy` publica puertos (8080 y
+  8443 por defecto). `api`, `db` y `cache` viven en la red `interna`
+  (`internal: true`), sin puertos en el host ni salida a internet. Cada servicio
+  declara `healthcheck` y la API espera con `depends_on: condition:
+  service_healthy` a que la base y la caché acepten conexiones. Los datos de la
+  base viven en el volumen `datos-postgres` y los certificados de Caddy, en
+  `datos-caddy`.
+- **Por qué.** `docker compose up` deja el sistema funcionando en una máquina
+  limpia, sin `.env`: sin él la API arranca en modo de desarrollo, que no
+  necesita secretos (D-23), así que el repositorio no guarda ninguna credencial
+  real. La clave por defecto de PostgreSQL (`apparchar`) solo sirve dentro de la
+  red interna; en un servidor se define `POSTGRES_PASSWORD` en el `.env`.
+  Caddy es la única puerta de entrada: comprime, agrega cabeceras de seguridad
+  y, con `DOMINIO` definido, obtiene y renueva solo el certificado HTTPS de
+  Let's Encrypt.
+- **Descartado.** Nginx como proxy: exige configurar y renovar el certificado a
+  mano (Certbot). Activar las comprobaciones activas de salud de Caddy: con una
+  sola réplica, marcaban la API caída durante un reinicio y respondían 503
+  hasta la siguiente revisión. En su lugar Caddy reintenta durante 15 s
+  (`lb_try_duration`).
+
+## D-29 · Valkey como caché de lectura y para el límite de intentos
+
+- **Decisión.** Con `REDIS_URL`, la API guarda en Valkey dos cosas:
+  - **La cartelera pública** (`GET /eventos`), durante 30 s
+    (`CACHE_CARTELERA_SEGUNDOS`). La clave incluye una versión de la cartelera
+    que sube antes de responder cualquier escritura exitosa (salvo iniciar
+    sesión), así que después de publicar o comprar nadie ve datos viejos.
+  - **Los contadores del límite de intentos** de inicio de sesión
+    (`rate-limit-redis`), que se comparten entre réplicas y no se pierden al
+    reiniciar el contenedor.
+- **Por qué.** La cartelera es la lectura más frecuente y es igual para todos:
+  no depende de quién la pide. La caché es un acelerador, no la fuente de
+  verdad, así que falla abierta: sin `REDIS_URL`, o si Valkey no responde, la
+  API consulta la base y el límite deja pasar la petición
+  (`passOnStoreError`), en vez de tumbar el inicio de sesión. Valkey corre sin
+  disco y con un tope de 64 MB (`allkeys-lru`).
+- **Detrás de un proxy.** Con `TRUST_PROXY=1`, Express toma la IP del cliente de
+  `X-Forwarded-For`. Sin eso, todos los intentos de inicio de sesión llegarían
+  con la IP del proxy y un solo atacante bloquearía a todos los usuarios. Caddy
+  reemplaza el `X-Forwarded-For` que manda el cliente, así que no se puede
+  falsificar.
+- **Descartado.** Guardar en caché el detalle del evento y el panel del
+  organizador: dependen del token (los borradores solo los ve su dueño) y
+  habría que separar la caché por usuario.
+
+## D-30 · Render para la URL pública, desplegado por el flujo de CI/CD
+
+- **Decisión.** La versión pública corre en Render con el *blueprint*
+  `render.yaml`: un servicio web con el mismo `Dockerfile`, PostgreSQL 17
+  administrado y Key Value (compatible con Valkey), en la región `virginia`, la
+  más cercana a Colombia. Render pone el HTTPS con certificado válido y genera
+  `JWT_SECRETO` y `PASARELA_CLAVE` (`generateValue`). La base y la caché solo
+  aceptan conexiones de la red interna de Render (`ipAllowList: []`).
+- **Cómo se despliega.** El despliegue automático de Render está apagado
+  (`autoDeployTrigger: off`). Lo dispara `.github/workflows/ci-cd.yaml` al
+  integrar a `main`, en cadena: `revisar` (contrato, coherencia y pruebas) →
+  `compose` (el conjunto completo con un comando, salud, caché y persistencia
+  tras reiniciar) → `imagen` (publica `ghcr.io/elverrianoes-collab/apparchar` con
+  las etiquetas `sha-…`, `latest` y la versión) → `desplegar` (llama al *Deploy
+  Hook* y espera hasta que `GET /salud` de la URL pública informe el commit
+  recién integrado). Si una etapa falla, las siguientes no corren.
+- **Cómo se revierte.** En Render, *Events → Rollback* al despliegue anterior;
+  o en GitHub, revertir el pull request: el flujo despliega el commit de
+  reversión.
+- **Limitaciones conocidas del plan gratuito.** El servicio se apaga después de
+  15 minutos sin tráfico y la primera petición tarda unos 30 a 60 s en
+  despertarlo. La base gratuita de Render vence a los 30 días: antes de esa
+  fecha hay que pasarla a un plan pago o migrar `DATABASE_URL` a otro
+  PostgreSQL (por ejemplo, Neon), sin cambiar el código.
+- **Descartado.** GitHub Pages: solo sirve archivos estáticos y la API no corre
+  ahí (ya publica el prototipo, D-17). Un servidor propio con el compose y
+  `DOMINIO`: funciona (Caddy obtiene el certificado solo), pero exige una
+  máquina con IP pública y un dominio que el equipo no tiene.
+
+## D-31 · Fuentes propias, compresión y caché del navegador
+
+- **Decisión.** Inter y Plus Jakarta Sans se sirven desde `web/fuentes/`
+  (licencia SIL OFL 1.1, versión variable, subconjunto latino) en lugar de
+  Google Fonts. La API comprime con `compression` y Caddy, con `zstd`/`gzip`.
+  Las fuentes y las imágenes se guardan 30 días en el navegador, el CSS, el JS
+  y los datos 1 hora, y el HTML se revalida siempre.
+- **Por qué.** Lo midió el informe de rendimiento
+  ([`docs/informe-rendimiento.md`](informe-rendimiento.md)): la hoja de estilos
+  de Google, en otro origen, y el CSS sin comprimir bloqueaban el pintado durante
+  más de 2 s. Con los tres cambios, el rendimiento en Lighthouse pasa de 87 a
+  100 y el LCP, de 3,05 s a 1,66 s, sin perder accesibilidad (100).
+- **Descartado.** Una etapa de construcción para minificar y partir el CSS y el
+  JS por página: con la compresión el ahorro restante es de unos 20 KB y
+  agregaría una herramienta más al proyecto.
