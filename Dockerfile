@@ -38,11 +38,18 @@ COPY api ./api
 COPY servidor ./servidor
 COPY web ./web
 # El código queda de root y solo lectura para el proceso; únicamente .datos (PGlite,
-# cuando no hay DATABASE_URL) es escribible por el usuario «node» (uid 1000).
-RUN mkdir -p .datos && chown node:node .datos
-USER node
+# cuando no hay DATABASE_URL) es escribible por el usuario «node» (uid y gid 1000,
+# en número para que el orquestador lo resuelva sin depender del /etc/passwd).
+# En ejecución no hacen falta npm, npx, corepack ni yarn (la API arranca con node):
+# se quitan del sistema de archivos final para reducir la superficie de ataque
+# (traían las 10 vulnerabilidades altas que reportaba trivy en la imagen).
+RUN mkdir -p .datos && chown node:node .datos \
+ && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+           /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+           /usr/local/bin/yarn /usr/local/bin/yarnpkg /opt/yarn-*
+USER 1000:1000
 EXPOSE 3000
 # Usa el mismo PORT que la API: algunas plataformas (Render, por ejemplo) lo cambian.
 HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --retries=3 \
-  CMD wget -qO- "http://127.0.0.1:${PORT}/salud" > /dev/null || exit 1
+  CMD ["sh", "-c", "wget -qO- \"http://127.0.0.1:${PORT}/salud\" > /dev/null || exit 1"]
 CMD ["node", "servidor/index.js"]
