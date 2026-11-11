@@ -6,7 +6,11 @@
 # Sin .env arranca en modo de desarrollo (sin credenciales en el repositorio).
 # Para producción: copiar .env.example a .env y definir NODE_ENV=production,
 # JWT_SECRETO, PASARELA_CLAVE, POSTGRES_PASSWORD y, con dominio propio, DOMINIO.
-name: apparchar
+# En un VPS compartido se agrega compose.vps.yaml (ver docs/despliegue-vps.md).
+#
+# Sin «name:» a propósito: el proyecto de compose toma el nombre de la carpeta
+# (o de COMPOSE_PROJECT_NAME). Así dos copias en la misma máquina (otro equipo,
+# otro despliegue) nunca comparten contenedores, redes ni volúmenes.
 
 services:
   proxy:
@@ -44,7 +48,9 @@ services:
       JWT_SECRETO: ${JWT_SECRETO:-}
       PASARELA_CLAVE: ${PASARELA_CLAVE:-}
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
-      TRUST_PROXY: "1"
+      # Confía en los proxies de redes privadas (Caddy y, en un VPS, el proxy del
+      # servidor): la IP del cliente es la primera dirección pública de X-Forwarded-For.
+      TRUST_PROXY: ${TRUST_PROXY:-loopback,linklocal,uniquelocal}
     # Sin «ports»: la API solo es alcanzable desde la red interna, a través del proxy.
     depends_on:
       db:
@@ -55,7 +61,7 @@ services:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/salud"]
       interval: 10s
       timeout: 3s
-      start_period: 20s
+      start_period: 30s
       retries: 3
     networks: [interna]
 

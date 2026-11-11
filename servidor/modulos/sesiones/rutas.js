@@ -23,7 +23,13 @@ const limiteEnMemoria = rateLimit(opcionesLimiteDeIntentos);
 
 // Con caché (Valkey), app.js arma el mismo límite con los contadores en la caché:
 // así se comparten entre réplicas y no se reinician cuando el contenedor se reinicia.
-const limiteDeIntentos = (req, res, next) => (req.app.locals.limiteDeIntentos || limiteEnMemoria)(req, res, next);
+// Si la caché no está conectada, el límite sigue funcionando con los contadores
+// en memoria: el inicio de sesión nunca queda sin protección contra la fuerza bruta.
+const limiteDeIntentos = (req, res, next) => {
+  const enCache = req.app.locals.limiteDeIntentos;
+  const usarCache = enCache && req.app.locals.cache?.disponible();
+  return (usarCache ? enCache : limiteEnMemoria)(req, res, next);
+};
 
 rutas.post('/sesiones', limiteDeIntentos, validar('iniciarSesion'), async (req, res) => {
   res.json(await iniciarSesion(req.app.locals.db, req.body));

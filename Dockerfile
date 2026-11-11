@@ -42,6 +42,7 @@ COPY web ./web
 RUN mkdir -p .datos && chown node:node .datos
 USER node
 EXPOSE 3000
-HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=3 \
-  CMD wget -qO- http://127.0.0.1:3000/salud > /dev/null || exit 1
+# Usa el mismo PORT que la API: algunas plataformas (Render, por ejemplo) lo cambian.
+HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --retries=3 \
+  CMD wget -qO- "http://127.0.0.1:${PORT}/salud" > /dev/null || exit 1
 CMD ["node", "servidor/index.js"]
