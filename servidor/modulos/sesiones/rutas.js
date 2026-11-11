@@ -8,7 +8,7 @@ import { iniciarSesion } from './servicio.js';
 const rutas = Router();
 
 // Freno a los ataques de fuerza bruta: 20 intentos cada 15 minutos por dirección IP.
-const limiteDeIntentos = rateLimit({
+export const opcionesLimiteDeIntentos = {
   windowMs: 15 * 60 * 1000,
   limit: 20,
   standardHeaders: 'draft-7',
@@ -18,7 +18,12 @@ const limiteDeIntentos = rateLimit({
     codigo: 'demasiados_intentos',
     mensaje: 'Demasiados intentos de inicio de sesión. Espera unos minutos y vuelve a intentarlo.',
   }),
-});
+};
+const limiteEnMemoria = rateLimit(opcionesLimiteDeIntentos);
+
+// Con caché (Valkey), app.js arma el mismo límite con los contadores en la caché:
+// así se comparten entre réplicas y no se reinician cuando el contenedor se reinicia.
+const limiteDeIntentos = (req, res, next) => (req.app.locals.limiteDeIntentos || limiteEnMemoria)(req, res, next);
 
 rutas.post('/sesiones', limiteDeIntentos, validar('iniciarSesion'), async (req, res) => {
   res.json(await iniciarSesion(req.app.locals.db, req.body));

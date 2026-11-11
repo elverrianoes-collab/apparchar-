@@ -1,6 +1,7 @@
 // Punto de entrada del backend: npm run api
 import { config, usaValoresDeDesarrollo } from './config.js';
 import { conectar } from './db/conexion.js';
+import { conectarCache } from './comun/cache.js';
 import { prepararEsquema } from './db/migrar.js';
 import { crearApp } from './app.js';
 import { ejecutarTareas } from './tareas.js';
@@ -9,13 +10,16 @@ const db = await conectar({ url: config.databaseUrl, directorio: config.director
 const esquemaNuevo = await prepararEsquema(db);
 await ejecutarTareas(db);
 
-const app = crearApp({ db });
+const cache = await conectarCache(config.redisUrl);
+
+const app = crearApp({ db, cache });
 const servidor = app.listen(config.puerto, () => {
   const url = `http://localhost:${config.puerto}`;
   console.log(`API de Apparchar escuchando en ${url}`);
   console.log(`  Panel del organizador (web): ${url}/app/panel.html`);
   console.log(`  Documentación (Swagger UI): ${url}/docs`);
   console.log(`  Base de datos: ${db.motor === 'postgresql' ? 'PostgreSQL (DATABASE_URL)' : `PGlite en ${config.directorioPglite}`}${esquemaNuevo ? ' · tablas creadas' : ''}`);
+  console.log(`  Caché: ${cache.motor === 'ninguna' ? 'ninguna (sin REDIS_URL)' : `Valkey${cache.disponible() ? '' : ' (todavía sin conexión; se reintenta)'}`}`);
   if (usaValoresDeDesarrollo) {
     console.log('  Aviso: modo de desarrollo. Sin JWT_SECRETO los tokens se firman con una clave aleatoria');
     console.log('  que cambia al reiniciar, y PASARELA_CLAVE vale «pasarela-demo» si no se define (ver .env.example).');
@@ -30,6 +34,7 @@ const intervalo = setInterval(() => {
 async function apagar() {
   clearInterval(intervalo);
   servidor.close();
+  await cache.cerrar();
   await db.cerrar();
   process.exit(0);
 }

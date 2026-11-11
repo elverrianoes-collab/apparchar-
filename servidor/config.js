@@ -27,6 +27,14 @@ export const config = {
   jwtSecreto: process.env.JWT_SECRETO || crypto.randomBytes(48).toString('base64url'),
   pasarelaClave: process.env.PASARELA_CLAVE || CLAVE_PASARELA_DESARROLLO,
   corsOrigen: process.env.CORS_ORIGIN || '*',
+  // Caché en Valkey/Redis (opcional): sin REDIS_URL la API consulta siempre la base.
+  redisUrl: process.env.REDIS_URL || '',
+  cacheCarteleraSegundos: Number(process.env.CACHE_CARTELERA_SEGUNDOS) || 30,
+  // Detrás de un proxy (Caddy en compose, el balanceador de Render) la IP del
+  // cliente llega en X-Forwarded-For. TRUST_PROXY=1 confía en un salto; vacío, en ninguno.
+  confiarEnProxy: process.env.TRUST_PROXY || '',
+  // Commit desplegado, para que /salud diga qué versión está corriendo.
+  commit: process.env.RENDER_GIT_COMMIT || process.env.COMMIT_SHA || '',
 };
 
 export const usaValoresDeDesarrollo = !process.env.JWT_SECRETO || config.pasarelaClave === CLAVE_PASARELA_DESARROLLO;

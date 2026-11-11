@@ -4,7 +4,7 @@
 openapi: 3.1.0
 info:
   title: API de Apparchar
-  version: 0.3.0
+  version: 0.4.0
   summary: 'Boletería digital con QR para organizadores de eventos de Casanare: eventos, compras sin cuenta y validación en la puerta.'
   description: |
     Contrato de la API de **Apparchar**, la boletería digital con QR para organizadores pequeños de
