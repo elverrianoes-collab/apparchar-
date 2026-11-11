@@ -5,12 +5,16 @@
 #
 # En cada pull request corren «revisar» y «compose»: si una prueba falla, el PR no
 # se integra. Al integrar a main (o al etiquetar vX.Y.Z) además se publica la
-# imagen en ghcr.io/elverrianoes-collab/apparchar y se despliega en Render. Cada
-# etapa depende de la anterior: lo que falla no se publica ni se despliega.
+# imagen en ghcr.io/elverrianoes-collab/proyecto-tecweb y se despliega. Cada etapa
+# depende de la anterior: lo que falla no se publica y, sin imagen, no se despliega.
 #
-# Configuración (una sola vez, en Settings del repositorio):
-#   Secrets → RENDER_DEPLOY_HOOK  URL del «Deploy Hook» del servicio en Render.
-#   Variables → URL_PUBLICA       https://… del servicio, para verificar el despliegue.
+# Despliegue (docs/despliegue-vps.md):
+#   VPS (principal): el servidor despliega solo («pull»). Un temporizador revisa cada
+#     minuto si main tiene un commit nuevo con su imagen sha-<commit> publicada y,
+#     si la hay, la despliega. El CI no guarda llaves del servidor.
+#   Render (alternativa): con el secreto RENDER_DEPLOY_HOOK, el CI dispara el despliegue.
+# En los dos casos, la etapa «desplegar» espera hasta que URL_PUBLICA/salud informe
+# el commit recién integrado (variable URL_PUBLICA en Settings → Variables).
 name: CI/CD
 
 on:
@@ -28,8 +32,9 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  # El nombre del repositorio termina en «-», que no es válido en un nombre de imagen.
-  IMAGEN: ghcr.io/elverrianoes-collab/apparchar
+  # Nombre propio de la imagen del proyecto académico (el del repositorio termina
+  # en «-», que no es válido, y no debe chocar con ninguna otra imagen de la cuenta).
+  IMAGEN: ghcr.io/elverrianoes-collab/proyecto-tecweb
 
 jobs:
   # 1. Contrato, coherencia y pruebas del backend (igual que `npm run revisar`).
@@ -114,15 +119,16 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGEN }}
-          # sha-1a2b3c4 siempre; latest en main; 0.4.0 y 0.4 al etiquetar v0.4.0.
+          # sha-<commit completo> siempre (es lo que busca el VPS); latest en main;
+          # 0.4.0 y 0.4 al etiquetar v0.4.0.
           tags: |
-            type=sha,prefix=sha-
+            type=sha,prefix=sha-,format=long
             type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
           labels: |
-            org.opencontainers.image.title=Apparchar
-            org.opencontainers.image.description=API y web de Apparchar (boletería digital con QR para Casanare)
+            org.opencontainers.image.title=Proyecto Tecnologías Web 2026-B
+            org.opencontainers.image.description=API y web del proyecto académico (boletería digital con QR para Casanare)
       - uses: docker/build-push-action@v6
         with:
           context: .
@@ -134,8 +140,9 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # 4. Despliegue en Render (solo main). Render reconstruye el mismo Dockerfile en
-  #    este commit; el paso siguiente espera hasta que /salud informe ese commit.
+  # 4. Despliegue (solo main). En el VPS lo hace el propio servidor apenas ve la
+  #    imagen sha-<commit>; con Render se dispara aquí. Luego se espera hasta que la
+  #    URL pública sirva este commit.
   desplegar:
     needs: imagen
     if: github.ref == 'refs/heads/main'
@@ -147,13 +154,13 @@ jobs:
       group: despliegue-produccion
       cancel-in-progress: false
     steps:
-      - name: Disparar el despliegue
+      - name: Disparar el despliegue en Render (si se usa)
         env:
           GANCHO: ${{ secrets.RENDER_DEPLOY_HOOK }}
         run: |
           if [ -z "$GANCHO" ]; then
-            echo "::error::Falta el secreto RENDER_DEPLOY_HOOK (Settings → Secrets and variables → Actions)."
-            exit 1
+            echo "Sin RENDER_DEPLOY_HOOK: el VPS despliega solo cuando ve la imagen sha-${GITHUB_SHA}."
+            exit 0
           fi
           curl -fsS -X POST "$GANCHO" > /dev/null
           echo "Render recibió la orden de desplegar ${GITHUB_SHA::7}."
@@ -162,7 +169,7 @@ jobs:
           URL_PUBLICA: ${{ vars.URL_PUBLICA }}
         run: |
           if [ -z "$URL_PUBLICA" ]; then
-            echo "::warning::Sin la variable URL_PUBLICA no se puede verificar el despliegue."
+            echo "::warning::Falta la variable URL_PUBLICA (Settings → Secrets and variables → Actions → Variables): no se puede verificar el despliegue."
             exit 0
           fi
           for intento in $(seq 1 60); do
@@ -171,8 +178,8 @@ jobs:
               echo "Desplegado: $URL_PUBLICA sirve ${GITHUB_SHA::7} (intento $intento)."
               exit 0
             fi
-            echo "Intento $intento: la URL todavía sirve ${commit:-nada} ; se espera 15 s."
+            echo "Intento $intento: la URL sirve ${commit:-otra versión o no responde}; se espera 15 s."
             sleep 15
           done
-          echo "::error::Después de 15 minutos la URL pública no sirve ${GITHUB_SHA::7}."
+          echo "::error::Después de 15 minutos $URL_PUBLICA no sirve ${GITHUB_SHA::7}."
           exit 1
