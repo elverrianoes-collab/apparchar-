@@ -1,0 +1,56 @@
+# Blueprint de Render: la versión pública de Apparchar.
+#   apparchar        → servicio web con este Dockerfile (HTTPS y dominio *.onrender.com los pone Render)
+#   apparchar-db     → PostgreSQL administrado (equivale al servicio «db» del compose)
+#   apparchar-cache  → Key Value de Render, compatible con Valkey/Redis (servicio «cache»)
+# El proxy del compose no se crea aquí: en Render el borde (TLS, balanceo,
+# compresión de la plataforma) lo pone la propia plataforma.
+#
+# El despliegue NO es automático desde Render: lo dispara el flujo de CI/CD
+# (.github/workflows/ci-cd.yaml) con el Deploy Hook, después de que pasan las
+# pruebas, el compose y la publicación de la imagen. Así lo que falla no se publica.
+# Los secretos (JWT_SECRETO, PASARELA_CLAVE) los genera Render: no viven en el repositorio.
+services:
+  - type: web
+    name: apparchar
+    runtime: docker
+    plan: free
+    region: virginia
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /salud
+    autoDeployTrigger: "off"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY
+        value: "1"
+      - key: JWT_SECRETO
+        generateValue: true
+      - key: PASARELA_CLAVE
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: apparchar-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: apparchar-cache
+          property: connectionString
+
+  - type: keyvalue
+    name: apparchar-cache
+    plan: free
+    region: virginia
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: [] # solo red interna de Render
+
+databases:
+  - name: apparchar-db
+    plan: free
+    region: virginia
+    databaseName: apparchar
+    user: apparchar
+    postgresMajorVersion: "17"
+    ipAllowList: [] # solo red interna de Render
