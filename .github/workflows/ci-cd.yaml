@@ -53,6 +53,8 @@ jobs:
         run: npm run verificar
       - name: Probar el backend
         run: npm test
+      - name: Revisar los scripts del despliegue en el VPS
+        run: shellcheck despliegue/vps/*.sh
 
   # 2. El conjunto completo con un comando, como en una máquina limpia: construye
   #    la imagen, levanta proxy + api + db + cache y comprueba que todo responda.
@@ -61,6 +63,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Validar el compose del VPS
+        run: |
+          sed -e 's/__NOMBRE__/proyecto-ci/g' -e 's/__PUERTO__/18080/g' -e 's/__SUBDOMINIO__/proyecto.ejemplo.co/g' \
+              -e 's/__GENERAR__/valor-de-prueba/g' -e 's|^IMAGEN_API=$|IMAGEN_API=ghcr.io/elverrianoes-collab/proyecto-tecweb:sha-prueba|' \
+              despliegue/vps/env.ejemplo > "$RUNNER_TEMP/env-vps"
+          docker compose --env-file "$RUNNER_TEMP/env-vps" -f compose.yaml -f compose.vps.yaml config --quiet
+          docker compose --env-file "$RUNNER_TEMP/env-vps" -f compose.yaml -f compose.vps.yaml config --format json \
+            | python3 -c "import json,sys; c=json.load(sys.stdin); p=c['services']['proxy']['ports']; assert len(p)==1 and p[0]['host_ip']=='127.0.0.1', p; assert all(not s.get('ports') for n,s in c['services'].items() if n!='proxy'); print('El compose del VPS solo publica', p[0]['host_ip'] + ':' + p[0]['published'])"
       - name: Levantar con un comando
         run: docker compose up --build --detach --wait --wait-timeout 180
       - name: Comprobar el conjunto

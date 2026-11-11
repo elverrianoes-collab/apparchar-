@@ -8,10 +8,10 @@ de tres corridas**, porque una sola corrida varía varios puntos.
 
 > **Estado de las mediciones.** La línea base y la medición posterior se
 > tomaron el **11 de noviembre de 2026** sobre los contenedores de este
-> repositorio, en una máquina limpia y con la misma configuración que usa Render
-> (la API sola, sin el proxy del compose). Al quedar publicada la URL pública,
-> se repite la medición posterior sobre ella y se agrega en la sección
-> «Medición sobre la URL pública».
+> repositorio, en una máquina limpia. Se midió la API sola y también a través
+> del proxy del compose, que es lo mismo que sirve el VPS. Cuando quede publicada
+> la URL pública, la medición posterior se repite sobre ella y se agrega en la
+> sección «Medición sobre la URL pública».
 
 ## 1. Línea base
 
@@ -81,6 +81,18 @@ En este orden, de mayor a menor impacto esperado sobre el LCP:
    cada visita. Así, un despliegue nuevo se ve de inmediato.
    *Por qué:* no cambia la primera visita que mide Lighthouse, pero sí las
    siguientes: la cartelera vuelve a cargar solo el HTML.
+4. **Sin saltos de diseño.** Al medir las cinco páginas apareció un problema que
+   la cartelera no tenía: en la validación en la puerta (`puerta.html`) el CLS
+   era de **0,51** y el rendimiento, de **79**. La traza de Lighthouse mostró
+   dos saltos:
+   - El título cambiaba de tamaño cuando llegaba Plus Jakarta Sans, que no se
+     precargaba.
+   - El bloque «Cargando…» tenía otro margen y otro alto que el formulario que lo
+     reemplaza, así que el formulario saltaba 24 px.
+
+   Se precargan las dos fuentes en las cinco páginas, y `.estado-puerta` ocupa el
+   mismo lugar y alto que la rejilla (`web/css/estilos.css`). Resultado: CLS 0 y
+   rendimiento 100 en esa página.
 
 ## 4. Medición posterior
 
@@ -104,6 +116,21 @@ Misma página, misma configuración de Lighthouse, con las tres intervenciones.
 A través del proxy del compose (Caddy con zstd) el resultado es el mismo:
 rendimiento 100, FCP 1,07 s, LCP 1,64 s y 125 KB.
 
+**Las cinco páginas**, a través del proxy, con las cuatro intervenciones
+(mediana de tres corridas, 11 de noviembre de 2026):
+
+| Página | Rendimiento | Accesibilidad | Buenas prácticas | LCP | CLS |
+|---|---:|---:|---:|---:|---:|
+| Cartelera (`index.html`) | 100 | 100 | 100 | 1,67 s | 0 |
+| Panel del organizador (`panel.html`) | 100 | 97 → **100** con el #7 | 100 | 1,67 s | 0,02 |
+| Detalle y compra (`detalle.html`) | 98 | 100 | 100 | 1,51 s | 0,09 |
+| Publicar evento (`publicar.html`) | 100 | 100 | 100 | 1,58 s | 0 |
+| Validar en la puerta (`puerta.html`) | 79 → **100** | 100 | 100 | 1,51 s | 0,51 → **0** |
+
+El 97 del panel es el contraste del texto bajo el título, que corrige el pull
+request #7. Con los dos integrados, las cinco páginas quedan en 100 de
+accesibilidad.
+
 **Qué quedó pendiente y por qué:**
 
 - **SEO en 60.** Se mantiene a propósito: la página publica eventos y
@@ -116,15 +143,14 @@ rendimiento 100, FCP 1,07 s, LCP 1,64 s y 125 KB.
   unos 20 KB y ya no aparece entre los recursos que bloquean.
 - **Los 12 ms de Total Blocking Time** salen de evaluar `app.js` una vez que la
   página ya pintó, y están muy por debajo del umbral de 200 ms.
-- **El arranque en frío de Render.** El plan gratuito apaga el servicio después
-  de 15 minutos sin tráfico, y la primera petición tarda unos 30 a 60 s en
-  despertarlo. Esa espera no es del código ni se arregla optimizando la página:
-  se documenta para que la medición sobre la URL pública se haga con el
-  servicio despierto.
+- **La red hasta el servidor.** En la URL pública se suma la latencia hasta el
+  VPS y el HTTPS. En el VPS no hay arranque en frío: los servicios están
+  siempre encendidos. En la alternativa de Render sí lo hay: el plan gratuito
+  apaga el servicio a los 15 minutos sin tráfico.
 
 ## 5. Medición sobre la URL pública
 
-*Pendiente:* se agrega al quedar publicado el servicio en Render, con la misma
+*Pendiente:* se agrega al quedar instalado el proyecto en el VPS, con la misma
 metodología (mediana de tres corridas, perfil móvil) y la fecha de la corrida.
 
 ## Cómo repetir la medición

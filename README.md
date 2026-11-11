@@ -1,7 +1,7 @@
 # Plataforma Apparchar
 
-**Aplicación desplegada (HTTPS):** _pendiente: se publica al crear el servicio en Render (ver [Despliegue](#despliegue))._ ·
-**Imagen:** [`ghcr.io/elverrianoes-collab/apparchar`](https://github.com/elverrianoes-collab/apparchar-/pkgs/container/apparchar) ·
+**Aplicación desplegada (HTTPS):** _pendiente: se publica al instalar el proyecto en el VPS (ver [Despliegue](#despliegue))._ ·
+**Imagen:** [`ghcr.io/elverrianoes-collab/proyecto-tecweb`](https://github.com/users/elverrianoes-collab/packages/container/package/proyecto-tecweb) ·
 **Diagrama:** [arquitectura de despliegue](#arquitectura-de-despliegue)
 
 Plataforma web para que organizadores de eventos de Casanare vendan boletas con
@@ -19,10 +19,10 @@ OpenAPI 3.1, el modelo de datos y el prototipo web navegable.
 | Producto | Dónde está | Cómo se comprueba |
 |---|---|---|
 | **Aplicación contenerizada** | [`Dockerfile`](Dockerfile) multietapa, [`compose.yaml`](compose.yaml) (proxy, api, db, cache), [`.dockerignore`](.dockerignore) | `docker compose up` en una carpeta nueva; `docker compose ps` muestra los cuatro servicios `healthy`. Ver [Levantar con Docker](#levantar-con-docker). |
-| **Despliegue público con HTTPS** | [`render.yaml`](render.yaml): servicio web, PostgreSQL y Key Value en Render | La URL del inicio de este README; `GET /salud` informa la base, la caché y el commit desplegado. |
+| **Despliegue público con HTTPS** | VPS: [`compose.vps.yaml`](compose.vps.yaml), [`despliegue/vps/`](despliegue/vps/) y [`docs/despliegue-vps.md`](docs/despliegue-vps.md). Alternativa: [`render.yaml`](render.yaml) | La URL del inicio de este README; `GET /salud` informa la base, la caché y el commit desplegado. |
 | **Integración y entrega continuas** | [`.github/workflows/ci-cd.yaml`](.github/workflows/ci-cd.yaml) | Pestaña *Actions*: `revisar → compose → imagen → desplegar`. Lo que falla no se publica ni se despliega. |
 | **Diagrama de arquitectura** | [`docs/arquitectura-despliegue.png`](docs/arquitectura-despliegue.png) (fuente SVG al lado) | Insertado en [Arquitectura de despliegue](#arquitectura-de-despliegue). |
-| **Informe de rendimiento** | [`docs/informe-rendimiento.md`](docs/informe-rendimiento.md) | Lighthouse antes y después: rendimiento 87 → 100, LCP 3,05 s → 1,66 s, accesibilidad 100. |
+| **Informe de rendimiento** | [`docs/informe-rendimiento.md`](docs/informe-rendimiento.md) | Lighthouse antes y después: rendimiento 87 → 100, LCP 3,05 s → 1,66 s, y accesibilidad 100 en las cinco páginas. |
 
 ## Cumplimiento del MVP
 
@@ -107,8 +107,9 @@ Caddy obtiene y renueva solo el certificado HTTPS.
 
 ## Variables de entorno
 
-Todas están en [`.env.example`](.env.example), sin valores reales. En Render las
-define [`render.yaml`](render.yaml); los secretos los genera Render.
+Todas están en [`.env.example`](.env.example), sin valores reales. En el VPS se
+generan al instalar y viven solo en el `.env` del servidor; en la alternativa de
+Render las define [`render.yaml`](render.yaml).
 
 | Variable | Para qué sirve | ¿Obligatoria? |
 |---|---|---|
@@ -121,11 +122,14 @@ define [`render.yaml`](render.yaml); los secretos los genera Render.
 | `CORS_ORIGIN` | Orígenes que pueden llamar a la API desde el navegador (por defecto, `*`). | No |
 | `REDIS_URL` | Valkey/Redis para la caché de la cartelera y el límite de intentos. Vacía: sin caché. | No |
 | `CACHE_CARTELERA_SEGUNDOS` | Vida de la cartelera en la caché (30 s). | No |
-| `TRUST_PROXY` | Saltos de proxy en los que se confía para leer la IP del cliente (`1` detrás de Caddy o Render). | Detrás de un proxy |
+| `TRUST_PROXY` | En qué proxies se confía para leer la IP del cliente: los de redes privadas en compose (`loopback,linklocal,uniquelocal`), `1` en Render. | Detrás de un proxy |
 | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Usuario, clave y base del servicio `db` del compose. | En un servidor |
 | `PUERTO_HTTP`, `PUERTO_HTTPS` | Puertos del host para el proxy (8080 y 8443; 80 y 443 en un servidor). | No |
 | `DOMINIO` | Dominio del proxy; con uno real, Caddy sirve HTTPS con Let's Encrypt. | Con dominio propio |
 | `IMAGEN_API` | Imagen de la API para el compose (por defecto se construye en local). | No |
+
+En el VPS se agregan las de [`despliegue/vps/env.ejemplo`](despliegue/vps/env.ejemplo):
+`COMPOSE_FILE`, `COMPOSE_PROJECT_NAME`, `VPS_ENLACE`, `VPS_PUERTO`, `IMAGEN_BASE` y `RAMA`.
 
 ## Despliegue
 
@@ -133,41 +137,59 @@ define [`render.yaml`](render.yaml); los secretos los genera Render.
 [`ci-cd.yaml`](.github/workflows/ci-cd.yaml) corre en cadena y cada etapa
 depende de la anterior:
 
-1. **revisar**: contrato, coherencia y pruebas del backend (`npm run revisar`).
-2. **compose**: `docker compose up --build --wait` sobre la máquina del CI;
-   comprueba la salud, la compresión, la caché de la cartelera y que un registro
-   sobreviva a `docker compose restart`.
-3. **imagen**: publica la imagen en
-   `ghcr.io/elverrianoes-collab/apparchar` con las etiquetas `sha-<commit>`,
-   `latest` y, al etiquetar `v0.4.0`, `0.4.0` y `0.4`.
-4. **desplegar**: llama al *Deploy Hook* de Render y espera hasta que `GET
-   /salud` de la URL pública informe el commit recién integrado.
+1. **revisar**: contrato, coherencia, pruebas del backend y `shellcheck` de los
+   scripts del VPS.
+2. **compose**: `docker compose up --build --wait` sobre la máquina del CI.
+   Comprueba la salud, la compresión, la caché de la cartelera y que un registro
+   sobreviva a `docker compose restart`. También valida que el compose del VPS
+   solo publique la dirección interna.
+3. **imagen**: publica la imagen en `ghcr.io/elverrianoes-collab/proyecto-tecweb`
+   con las etiquetas `sha-<commit>`, `latest` y, al etiquetar `v0.4.0`, `0.4.0`
+   y `0.4`.
+4. **desplegar**: espera hasta que `GET /salud` de la URL pública informe el
+   commit recién integrado.
 
 En los pull requests corren solo las dos primeras: si fallan, el PR no se
-integra y nada se despliega.
+integra, no hay imagen y nada se despliega.
 
-**A dónde va.** A Render, con el blueprint [`render.yaml`](render.yaml):
-servicio web `apparchar` (este `Dockerfile`), PostgreSQL `apparchar-db` y Key
-Value `apparchar-cache`, en la región Virginia. Render pone el HTTPS.
+**A dónde va.** A un VPS compartido con otra aplicación en producción, aislado
+como proyecto `proyecto` ([`docs/despliegue-vps.md`](docs/despliegue-vps.md)).
+En el servidor, un temporizador de systemd ejecuta cada minuto
+[`despliegue/vps/actualizar.sh`](despliegue/vps/actualizar.sh). Si `main` tiene
+un commit nuevo con su imagen publicada, lo despliega con
+`docker compose up --wait` ([`compose.vps.yaml`](compose.vps.yaml)). El proxy del
+servidor pone el HTTPS del subdominio, y el proyecto solo escucha en
+`127.0.0.1`. GitHub no guarda ninguna llave del servidor.
 
-**Cómo se revierte.** En Render, *Events → Rollback* al despliegue anterior, o
-en GitHub, *Revert* del pull request: el flujo despliega la reversión.
+**Cómo se revierte.**
+- **Automático:** si una versión no queda sana, el agente vuelve a la anterior en
+  segundos y no reintenta ese commit.
+- **A mano:** escribir el commit en `/opt/proyecto/.despliegue/fijar-commit`.
+- **Desde GitHub:** *Revert* del pull request; el flujo despliega la reversión.
 
 **Configuración inicial (una sola vez).**
 
-1. En <https://dashboard.render.com>, *New → Blueprint*, conectar este
-   repositorio y aplicar `render.yaml`.
-2. En el servicio `apparchar` de Render, *Settings → Deploy Hook*: copiar la URL.
-3. En GitHub, *Settings → Secrets and variables → Actions*: crear el secreto
-   `RENDER_DEPLOY_HOOK` con esa URL y la variable `URL_PUBLICA` con la dirección
-   `https://….onrender.com` del servicio.
+1. Instalar en el VPS con Claude Code, usando el prompt
+   [`despliegue/vps/PROMPT-instalar-proyecto.md`](despliegue/vps/PROMPT-instalar-proyecto.md).
+   Ese prompt pide aprobación antes de cada cambio delicado.
+2. Hacer público el paquete `proyecto-tecweb` (perfil → *Packages* → *Package
+   settings* → *Change visibility*), para que el servidor lo descargue sin
+   credenciales.
+3. En GitHub, *Settings → Secrets and variables → Actions → Variables*: crear
+   `URL_PUBLICA` con `https://<subdominio>`.
+
+**Alternativa: Render.** [`render.yaml`](render.yaml) despliega el mismo
+`Dockerfile` en Render. El CI lo dispara si existe el secreto
+`RENDER_DEPLOY_HOOK`. Ver la última sección de
+[`docs/despliegue-vps.md`](docs/despliegue-vps.md).
 
 ## Arquitectura de despliegue
 
 ![Arquitectura de despliegue de Apparchar](docs/arquitectura-despliegue.png)
 
-El tráfico entra por un solo servicio: `proxy` en el compose o el borde de
-Render en la URL pública. La API habla con `db` y `cache` por la red interna;
+El tráfico entra por un solo servicio: `proxy` en el compose local o, en el VPS,
+el proxy del servidor, que le pasa el subdominio a `proxy` por la dirección
+interna. La API habla con `db` y `cache` por la red interna;
 ninguno de los dos tiene puertos en el host. Las decisiones están en
 [`docs/decisiones.md`](docs/decisiones.md) (D-27 a D-31).
 
@@ -178,7 +200,7 @@ ninguno de los dos tiene puertos en el host. Las decisiones están en
 | Anteproyecto, prototipo y contrato (Entregas 1 y 2) | ✅ Entregados |
 | MVP del backend: CRUD de cuatro recursos, autenticación, validación y documentación (Entrega 3) | ✅ Entregado |
 | Contenerización, compose, CI/CD, diagrama e informe de rendimiento (Entrega 4) | ✅ En este repositorio |
-| URL pública en Render | ⏳ Pendiente de crear el servicio (configuración inicial de [Despliegue](#despliegue)) |
+| URL pública en el VPS | ⏳ Pendiente de instalar (configuración inicial de [Despliegue](#despliegue)) |
 | Entrega 5: funcionalidades congeladas, auditoría de accesibilidad y seguridad | ⏳ Pendiente |
 
 ## Cómo ejecutarlo
@@ -345,8 +367,10 @@ apparchar-/
 ├── proxy/Caddyfile            Proxy de entrada del compose (compresión, HTTPS)
 ├── Dockerfile                 Imagen multietapa de la API y la web
 ├── compose.yaml               proxy + api + db + cache con un comando
+├── compose.vps.yaml           Ajustes para el VPS compartido (puerto interno, topes, imagen del CI)
+├── despliegue/vps/            Agente de despliegue, respaldos, systemd, plantillas y prompt de instalación
 ├── .dockerignore              Lo que no entra a la imagen
-├── render.yaml                Blueprint del despliegue público en Render
+├── render.yaml                Alternativa: blueprint para Render
 ├── .env.example               Variables de entorno (solo nombres)
 └── .github/workflows/         ci-cd.yaml (pruebas, imagen y despliegue) y pages.yml
 ```
@@ -418,7 +442,7 @@ restricciones del DDL (44 comprobaciones).
 
 | Herramienta | Para qué | Alcance |
 |---|---|---|
-| Claude (Anthropic) | Contrato, modelo de datos y prototipo de la Entrega 2; en el MVP, el código del backend, sus pruebas automáticas, la colección de Postman y esta documentación. En la Entrega 4, el Dockerfile, el compose, el flujo de CI/CD, el blueprint de Render, la caché con Valkey, el diagrama y las mediciones del informe de rendimiento. | Borradores y verificaciones automáticas. Cada integrante revisa, ajusta y sustenta la parte que sube en su pull request. |
+| Claude (Anthropic) | Contrato, modelo de datos y prototipo de la Entrega 2; en el MVP, el código del backend, sus pruebas automáticas, la colección de Postman y esta documentación. En la Entrega 4, el Dockerfile, los compose, el flujo de CI/CD, el agente de despliegue del VPS y su prompt de instalación, el blueprint de Render, la caché con Valkey, el diagrama y las mediciones del informe de rendimiento. | Borradores y verificaciones automáticas. Cada integrante revisa, ajusta y sustenta la parte que sube en su pull request. |
 
 Declaración: los integrantes del equipo «Los insanos» declaran de manera libre y
 transparente que usaron una herramienta de inteligencia artificial generativa

@@ -23,11 +23,11 @@
   <rect width="1600" height="1090" fill="#ffffff"/>
 
   <text x="40" y="52" class="titulo">Apparchar · arquitectura de despliegue (Entrega 4)</text>
-  <text x="40" y="82" class="subtitulo">Los nombres de los servicios son los de compose.yaml y render.yaml. Solo un servicio recibe tráfico desde internet en cada despliegue.</text>
+  <text x="40" y="82" class="subtitulo">Los nombres de los servicios son los de compose.yaml. En el VPS se agrega compose.vps.yaml. En cada caso, un solo punto recibe el tráfico de internet.</text>
 
   <!-- ===================== Panel izquierdo: docker compose ===================== -->
   <rect x="40" y="110" width="900" height="760" rx="16" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
-  <text x="64" y="146" class="panel">docker compose up  ·  local o servidor propio</text>
+  <text x="64" y="146" class="panel">docker compose up  ·  en local (máquina limpia)</text>
   <text x="64" y="170" class="nota">Un comando levanta los cuatro servicios; cada uno declara healthcheck.</text>
 
   <!-- Internet -->
@@ -91,44 +91,49 @@
   <line x1="705" y1="378" x2="705" y2="380" stroke="none"/>
   <path d="M 890 362 C 925 380, 925 800, 882 830" fill="none" stroke="#b45309" stroke-width="3" stroke-dasharray="6 5"/>
 
-  <!-- ===================== Panel derecho: Render ===================== -->
+  <!-- ===================== Panel derecho: VPS compartido ===================== -->
   <rect x="980" y="110" width="580" height="760" rx="16" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
-  <text x="1004" y="146" class="panel">Render · URL pública (render.yaml)</text>
-  <text x="1004" y="170" class="nota">Mismo Dockerfile. El borde HTTPS lo pone Render.</text>
+  <text x="1004" y="146" class="panel">VPS compartido · URL pública</text>
+  <text x="1004" y="170" class="nota">compose.yaml + compose.vps.yaml, aislado como «proyecto».</text>
 
   <rect x="1100" y="190" width="340" height="62" rx="31" fill="#fef3c7" stroke="#b45309" stroke-width="2"/>
   <text x="1270" y="217" text-anchor="middle" class="nombre">Navegador · internet</text>
-  <text x="1270" y="240" text-anchor="middle" class="detalle">https://(servicio).onrender.com</text>
+  <text x="1270" y="240" text-anchor="middle" class="detalle">https://(subdominio)</text>
 
-  <rect x="1060" y="300" width="420" height="80" rx="12" fill="#ffffff" stroke="#b45309" stroke-width="3"/>
-  <text x="1078" y="330" class="nombre">Borde de Render</text>
-  <text x="1078" y="356" class="detalle">certificado TLS válido · balanceador · X-Forwarded-For</text>
+  <rect x="1010" y="290" width="330" height="86" rx="12" fill="#ffffff" stroke="#b45309" stroke-width="3"/>
+  <text x="1026" y="318" class="nombre">Proxy del servidor</text>
+  <text x="1026" y="342" class="detalle">ya existía · nginx, Caddy o Traefik</text>
+  <text x="1026" y="363" class="detalle">HTTPS del subdominio (Let's Encrypt)</text>
 
-  <rect x="1060" y="440" width="420" height="98" rx="12" fill="#ffffff" stroke="#0f172a" stroke-width="3"/>
-  <text x="1078" y="468" class="nombre">apparchar · servicio web</text>
-  <text x="1078" y="492" class="detalle">imagen del Dockerfile · plan free</text>
-  <text x="1078" y="514" class="detalle">healthCheckPath /salud · TRUST_PROXY=1</text>
+  <rect x="1370" y="290" width="170" height="86" rx="12" fill="#e2e8f0" stroke="#64748b" stroke-width="2" stroke-dasharray="6 5"/>
+  <text x="1455" y="318" text-anchor="middle" class="etiqueta">Otra aplicación</text>
+  <text x="1455" y="340" text-anchor="middle" class="detalle">del servidor</text>
+  <text x="1455" y="362" text-anchor="middle" class="detalle">(no se toca)</text>
 
-  <rect x="1010" y="610" width="250" height="110" rx="12" fill="#ffffff" stroke="#0f766e" stroke-width="3"/>
-  <text x="1026" y="638" class="nombre">apparchar-db</text>
-  <text x="1026" y="662" class="detalle">PostgreSQL 17</text>
-  <text x="1026" y="684" class="detalle">administrado, persistente</text>
-  <text x="1026" y="706" class="detalle">solo red interna</text>
+  <rect x="1010" y="440" width="530" height="118" rx="12" fill="#ffffff" stroke="#0f172a" stroke-width="3"/>
+  <text x="1026" y="468" class="nombre">proyecto · los mismos 4 servicios</text>
+  <text x="1026" y="494" class="detalle">proxy (solo 127.0.0.1:18080) → api → db · cache</text>
+  <text x="1026" y="516" class="detalle">volumen proyecto_datos-postgres · respaldo diario</text>
+  <text x="1026" y="538" class="detalle">topes de memoria, CPU y registros por servicio</text>
 
-  <rect x="1290" y="610" width="250" height="110" rx="12" fill="#ffffff" stroke="#be123c" stroke-width="3"/>
-  <text x="1306" y="638" class="nombre">apparchar-cache</text>
-  <text x="1306" y="662" class="detalle">Key Value (Valkey)</text>
-  <text x="1306" y="684" class="detalle">allkeys-lru</text>
-  <text x="1306" y="706" class="detalle">solo red interna</text>
+  <rect x="1010" y="616" width="530" height="96" rx="12" fill="#ffffff" stroke="#4f46e5" stroke-width="3"/>
+  <text x="1026" y="644" class="nombre">Agente de despliegue · systemd, cada minuto</text>
+  <text x="1026" y="668" class="detalle">¿commit nuevo en main con su imagen? → compose up --wait</text>
+  <text x="1026" y="690" class="detalle">si no queda sano, vuelve a la versión anterior</text>
 
-  <line x1="1270" y1="252" x2="1270" y2="296" stroke="#0f172a" stroke-width="3" marker-end="url(#flecha)"/>
-  <text x="1282" y="280" class="etiqueta">HTTPS</text>
-  <line x1="1270" y1="380" x2="1270" y2="436" stroke="#0f172a" stroke-width="3" marker-end="url(#flecha)"/>
-  <text x="1282" y="414" class="etiqueta">HTTP interno · puerto 3000</text>
-  <line x1="1200" y1="538" x2="1150" y2="606" stroke="#0f172a" stroke-width="3" marker-end="url(#flecha)"/>
-  <text x="1040" y="578" class="etiqueta">DATABASE_URL</text>
-  <line x1="1340" y1="538" x2="1400" y2="606" stroke="#0f172a" stroke-width="3" marker-end="url(#flecha)"/>
-  <text x="1384" y="578" class="etiqueta">REDIS_URL</text>
+  <rect x="1010" y="770" width="530" height="70" rx="12" fill="#ede9fe" stroke="#4f46e5" stroke-width="2"/>
+  <text x="1026" y="798" class="nombre">GHCR · imagen del CI</text>
+  <text x="1026" y="822" class="detalle">ghcr.io/elverrianoes-collab/proyecto-tecweb:sha-(commit)</text>
+
+  <line x1="1175" y1="252" x2="1175" y2="286" stroke="#0f172a" stroke-width="3" marker-end="url(#flecha)"/>
+  <text x="1187" y="276" class="etiqueta">HTTPS · 443</text>
+  <line x1="1340" y1="333" x2="1366" y2="333" stroke="#64748b" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#flecha-gris)"/>
+  <line x1="1175" y1="376" x2="1175" y2="436" stroke="#0f172a" stroke-width="3" marker-end="url(#flecha)"/>
+  <text x="1187" y="412" class="etiqueta">HTTP interno · 127.0.0.1:18080</text>
+  <line x1="1275" y1="616" x2="1275" y2="562" stroke="#4f46e5" stroke-width="3" marker-end="url(#flecha)"/>
+  <text x="1287" y="596" class="etiqueta" style="fill:#3730a3">despliega</text>
+  <line x1="1275" y1="770" x2="1275" y2="716" stroke="#4f46e5" stroke-width="3" marker-end="url(#flecha)"/>
+  <text x="1287" y="750" class="etiqueta" style="fill:#3730a3">descarga la imagen sha-(commit)</text>
 
   <!-- ===================== Franja inferior: CI/CD ===================== -->
   <rect x="40" y="910" width="1520" height="150" rx="16" fill="#0f172a"/>
@@ -143,10 +148,10 @@
     <text x="452" y="1018" class="paso-detalle">up --wait, salud, caché y reinicio</text>
     <rect x="804" y="966" width="330" height="74" rx="10" fill="#ffffff"/>
     <text x="822" y="994" class="paso">3 · imagen</text>
-    <text x="822" y="1018" class="paso-detalle">ghcr.io/…/apparchar:sha-·, latest, 0.4.0</text>
+    <text x="822" y="1018" class="paso-detalle">GHCR: sha-(commit), latest, 0.4.0</text>
     <rect x="1204" y="966" width="332" height="74" rx="10" fill="#fbbf24"/>
     <text x="1222" y="994" class="paso">4 · desplegar (solo main)</text>
-    <text x="1222" y="1018" class="paso-detalle">Deploy Hook → /salud sirve el commit</text>
+    <text x="1222" y="1018" class="paso-detalle">el VPS la toma; CI espera /salud</text>
   </g>
   <line x1="364" y1="973" x2="430" y2="973" stroke="#ffffff" stroke-width="3" marker-end="url(#flecha-gris)"/>
   <line x1="734" y1="973" x2="800" y2="973" stroke="#ffffff" stroke-width="3" marker-end="url(#flecha-gris)"/>

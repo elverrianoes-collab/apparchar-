@@ -461,6 +461,11 @@ producto «contrato primero», con PostgreSQL, y se implementará en las Entrega
   Caddy es la única puerta de entrada: comprime, agrega cabeceras de seguridad
   y, con `DOMINIO` definido, obtiene y renueva solo el certificado HTTPS de
   Let's Encrypt.
+- **Sin nombre fijo.** `compose.yaml` no declara `name:`: el proyecto toma el
+  nombre de la carpeta o de `COMPOSE_PROJECT_NAME`. Dos copias en la misma
+  máquina (el docente que clona varios proyectos, o el VPS que ya corre otra
+  aplicación) nunca comparten contenedores, redes ni, sobre todo, volúmenes de
+  base de datos.
 - **Descartado.** Nginx como proxy: exige configurar y renovar el certificado a
   mano (Certbot). Activar las comprobaciones activas de salud de Caddy: con una
   sola réplica, marcaban la API caída durante un reinicio y respondían 503
@@ -480,46 +485,59 @@ producto «contrato primero», con PostgreSQL, y se implementará en las Entrega
 - **Por qué.** La cartelera es la lectura más frecuente y es igual para todos:
   no depende de quién la pide. La caché es un acelerador, no la fuente de
   verdad, así que falla abierta: sin `REDIS_URL`, o si Valkey no responde, la
-  API consulta la base y el límite deja pasar la petición
-  (`passOnStoreError`), en vez de tumbar el inicio de sesión. Valkey corre sin
-  disco y con un tope de 64 MB (`allkeys-lru`).
-- **Detrás de un proxy.** Con `TRUST_PROXY=1`, Express toma la IP del cliente de
-  `X-Forwarded-For`. Sin eso, todos los intentos de inicio de sesión llegarían
-  con la IP del proxy y un solo atacante bloquearía a todos los usuarios. Caddy
-  reemplaza el `X-Forwarded-For` que manda el cliente, así que no se puede
-  falsificar.
+  API consulta la base, y el límite de intentos sigue funcionando con
+  contadores en memoria (el inicio de sesión nunca queda sin protección ni se
+  cae). Valkey corre sin disco y con un tope de 64 MB (`allkeys-lru`).
+- **Detrás de un proxy.** Express toma la IP del cliente de `X-Forwarded-For` y
+  confía solo en los proxies de redes privadas
+  (`TRUST_PROXY=loopback,linklocal,uniquelocal`): Caddy y, en el VPS, el proxy
+  del servidor. Sin eso, todos los intentos de inicio de sesión llegarían con
+  la IP del proxy y un solo atacante bloquearía a todos los usuarios. Caddy
+  conserva la cabecera que le manda un proxy de una red privada y reemplaza la
+  que llega de internet, así que un cliente no puede falsificar su IP.
 - **Descartado.** Guardar en caché el detalle del evento y el panel del
   organizador: dependen del token (los borradores solo los ve su dueño) y
   habría que separar la caché por usuario.
 
-## D-30 · Render para la URL pública, desplegado por el flujo de CI/CD
+## D-30 · URL pública en un VPS compartido, con despliegue «pull» desde la imagen del CI
 
-- **Decisión.** La versión pública corre en Render con el *blueprint*
-  `render.yaml`: un servicio web con el mismo `Dockerfile`, PostgreSQL 17
-  administrado y Key Value (compatible con Valkey), en la región `virginia`, la
-  más cercana a Colombia. Render pone el HTTPS con certificado válido y genera
-  `JWT_SECRETO` y `PASARELA_CLAVE` (`generateValue`). La base y la caché solo
-  aceptan conexiones de la red interna de Render (`ipAllowList: []`).
-- **Cómo se despliega.** El despliegue automático de Render está apagado
-  (`autoDeployTrigger: off`). Lo dispara `.github/workflows/ci-cd.yaml` al
-  integrar a `main`, en cadena: `revisar` (contrato, coherencia y pruebas) →
-  `compose` (el conjunto completo con un comando, salud, caché y persistencia
-  tras reiniciar) → `imagen` (publica `ghcr.io/elverrianoes-collab/apparchar` con
-  las etiquetas `sha-…`, `latest` y la versión) → `desplegar` (llama al *Deploy
-  Hook* y espera hasta que `GET /salud` de la URL pública informe el commit
-  recién integrado). Si una etapa falla, las siguientes no corren.
-- **Cómo se revierte.** En Render, *Events → Rollback* al despliegue anterior;
-  o en GitHub, revertir el pull request: el flujo despliega el commit de
-  reversión.
-- **Limitaciones conocidas del plan gratuito.** El servicio se apaga después de
-  15 minutos sin tráfico y la primera petición tarda unos 30 a 60 s en
-  despertarlo. La base gratuita de Render vence a los 30 días: antes de esa
-  fecha hay que pasarla a un plan pago o migrar `DATABASE_URL` a otro
-  PostgreSQL (por ejemplo, Neon), sin cambiar el código.
-- **Descartado.** GitHub Pages: solo sirve archivos estáticos y la API no corre
-  ahí (ya publica el prototipo, D-17). Un servidor propio con el compose y
-  `DOMINIO`: funciona (Caddy obtiene el certificado solo), pero exige una
-  máquina con IP pública y un dominio que el equipo no tiene.
+- **Decisión.** La versión pública corre en un VPS que ya tiene otra aplicación
+  en producción. El proyecto se instala a su lado como `proyecto`: carpeta
+  `/opt/proyecto`, usuario de sistema y proyecto de compose propios, y
+  `compose.vps.yaml` encima de `compose.yaml`. El proxy del proyecto escucha
+  solo en `127.0.0.1:VPS_PUERTO`, la API usa la imagen publicada por el CI y cada
+  servicio tiene topes de memoria, CPU y registros. El HTTPS del subdominio lo
+  pone el proxy que ya tiene el servidor, con un sitio nuevo que no modifica los
+  existentes. Esto es lo que se instala con
+  `despliegue/vps/PROMPT-instalar-proyecto.md`.
+- **Cómo se despliega.** `.github/workflows/ci-cd.yaml` corre en cadena al
+  integrar a `main`: `revisar` → `compose` → `imagen` (publica
+  `ghcr.io/elverrianoes-collab/proyecto-tecweb:sha-<commit>`) → `desplegar`. En
+  el servidor, un temporizador de systemd ejecuta cada minuto
+  `despliegue/vps/actualizar.sh`. Si `main` tiene un commit nuevo y su imagen
+  existe (lo que prueba que pasó `revisar` y `compose`), el agente lo despliega
+  con `docker compose up --wait`. Si no queda sano, vuelve a la versión anterior
+  y no reintenta ese commit. La etapa `desplegar` del CI espera hasta que
+  `URL_PUBLICA/salud` informe el commit.
+- **Por qué «pull».** Con SSH desde el CI, GitHub guardaría una llave con acceso
+  a Docker (equivalente a root) en un servidor de producción ajeno al curso, y
+  un flujo modificado en una rama podría usarla. Con el agente, el servidor solo
+  lee el repositorio público y la imagen publicada, y no sale ninguna credencial
+  del servidor. Solo se despliegan commits que pertenecen a `main`.
+- **Por qué un VPS y no Render.** No hay arranque en frío: Render gratuito se
+  apaga a los 15 minutos sin tráfico y tarda de 30 a 60 s en despertar, justo
+  cuando el docente abre la URL. Los datos no vencen: la base gratuita de Render
+  vence a los 30 días, antes de la entrega final del 17 de diciembre. Y el
+  despliegue público es el mismo compose que se evalúa en local, con los cuatro
+  servicios del diagrama.
+- **Cómo se revierte.** Automático (el agente vuelve a la versión sana), a mano
+  (`/opt/proyecto/.despliegue/fijar-commit`) o con *Revert* del pull request.
+- **Alternativa.** `render.yaml` queda como plan B, con el mismo Dockerfile,
+  PostgreSQL y Key Value administrados. El CI dispara su *Deploy Hook* solo si
+  existe el secreto `RENDER_DEPLOY_HOOK`.
+- **Descartado.** GitHub Pages: solo sirve archivos estáticos (ya publica el
+  prototipo, D-17). Publicar el proxy del proyecto en los puertos 80 y 443 del
+  VPS: ya los usa la otra aplicación.
 
 ## D-31 · Fuentes propias, compresión y caché del navegador
 
@@ -533,6 +551,10 @@ producto «contrato primero», con PostgreSQL, y se implementará en las Entrega
   de Google, en otro origen, y el CSS sin comprimir bloqueaban el pintado durante
   más de 2 s. Con los tres cambios, el rendimiento en Lighthouse pasa de 87 a
   100 y el LCP, de 3,05 s a 1,66 s, sin perder accesibilidad (100).
+- **Además, sin saltos de diseño.** Las cinco páginas precargan las dos
+  fuentes. El estado de carga de la puerta ocupa el mismo lugar y alto que el
+  formulario que lo reemplaza: su CLS pasa de 0,51 a 0 y su rendimiento, de 79
+  a 100.
 - **Descartado.** Una etapa de construcción para minificar y partir el CSS y el
   JS por página: con la compresión el ahorro restante es de unos 20 KB y
   agregaría una herramienta más al proyecto.
