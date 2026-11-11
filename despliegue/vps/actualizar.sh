@@ -86,7 +86,10 @@ RAMA="${RAMA:-main}"
 [[ -n "$(leer_env COMPOSE_PROJECT_NAME)" ]] || { log "ERROR: falta COMPOSE_PROJECT_NAME en el .env."; exit 1; }
 
 # ¿Qué commit debería estar desplegado?
-objetivo="$(tr -d '[:space:]' < "$ESTADO/fijar-commit" 2>/dev/null || true)"
+objetivo=""
+if [[ -s "$ESTADO/fijar-commit" ]]; then
+  objetivo="$(tr -d '[:space:]' < "$ESTADO/fijar-commit")"
+fi
 if [[ -z "$objetivo" ]]; then
   objetivo="$(git ls-remote origin "refs/heads/$RAMA" | cut -f1)"
 fi
