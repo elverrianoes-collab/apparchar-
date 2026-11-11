@@ -128,7 +128,11 @@ fijar_env IMAGEN_API "$imagen"
 
 if levantar; then
   printf '%s' "$objetivo" > "$ESTADO/commit-desplegado"
-  rm -f "$ESTADO/commit-fallido" "$ESTADO/ultimo-aviso"
+  rm -f "$ESTADO/ultimo-aviso"
+  # Solo se olvida un commit fallido cuando ese mismo commit se despliega bien (--forzar).
+  if [[ "$(cat "$ESTADO/commit-fallido" 2>/dev/null || true)" == "$objetivo" ]]; then
+    rm -f "$ESTADO/commit-fallido"
+  fi
   log "Desplegado ${objetivo:0:7}: todos los servicios quedaron sanos."
   # Limpieza: solo imágenes de este proyecto, conservando la actual y la anterior.
   docker image ls "$IMAGEN_BASE" --format '{{.Repository}}:{{.Tag}}' \
