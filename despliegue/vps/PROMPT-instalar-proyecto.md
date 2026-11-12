@@ -29,6 +29,12 @@ ya trae todo lo necesario para este servidor:
 - `despliegue/vps/proxy-servidor/`: plantillas del sitio para nginx, Caddy o Traefik.
 - `docs/despliegue-vps.md`: cómo funciona y cómo se opera.
 
+> **Mientras el pull request #8 no esté integrado**, `main` todavía no trae estos
+> archivos: están en la rama `feature/contenerizacion`. La fase 1 lo detecta y
+> deja la copia en esa rama, para preparar todo desde ya. El agente siempre sigue
+> `main`, así que el primer despliegue ocurre solo, unos minutos después de que el
+> #8 se integre y el CI publique la imagen.
+
 **Este servidor ya está en producción con otra aplicación** (la versión comercial
 de Apparchar, que no es este proyecto). Esa aplicación tiene prioridad absoluta:
 este proyecto se instala a su lado, aislado, sin tocar nada de ella.
@@ -140,6 +146,11 @@ sudo useradd --system --create-home --home-dir /var/lib/$NOMBRE --shell /usr/sbi
 sudo usermod -aG docker "$NOMBRE"
 sudo install -d -o "$NOMBRE" -g "$NOMBRE" -m 755 "$DIR"
 sudo -u "$NOMBRE" git clone https://github.com/elverrianoes-collab/apparchar- "$DIR"
+# Si main todavía no trae los archivos de despliegue (el PR #8 sin integrar), usa su rama.
+if [ ! -f "$DIR/compose.vps.yaml" ]; then
+  sudo -u "$NOMBRE" git -C "$DIR" checkout --quiet feature/contenerizacion && echo "Copia en la rama del PR #8"
+fi
+ls "$DIR/compose.vps.yaml" "$DIR/despliegue/vps/actualizar.sh"   # deben existir los dos
 ```
 
 Crea el `.env` a partir de la plantilla, con secretos nuevos y sin mostrarlos:
@@ -169,8 +180,14 @@ sirve. En ese caso, usa en `VPS_ENLACE` la dirección de la puerta de enlace de
    - Si responde **denied** o **unauthorized**: el paquete es privado. Pídeme que
      lo haga público (GitHub → perfil → *Packages* → `proyecto-tecweb` →
      *Package settings* → *Change visibility* → *Public*) y espera.
-   - Si responde **manifest unknown**: el CI todavía no termina para ese commit o
-     falló. Revísalo en la pestaña *Actions* del repositorio, avísame y espera.
+   - Si responde **manifest unknown** y `git -C "$DIR" ls-tree origin/main compose.vps.yaml`
+     no muestra nada: el PR #8 todavía no está integrado, así que no hay imagen
+     para `main`. **No esperes**: sigue con las fases 3 y 4 y avísame. El agente hará
+     el primer despliegue solo cuando el #8 se integre; entonces se completan los
+     pasos 2 y 3 de esta fase y la fase 5.
+   - Si responde **manifest unknown** con el #8 ya integrado: el CI todavía no
+     termina para ese commit o falló. Revísalo en la pestaña *Actions* del
+     repositorio, avísame y espera.
 2. Ejecuta el agente una vez, a mano:
    ```bash
    sudo -u "$NOMBRE" bash "$DIR/despliegue/vps/actualizar.sh"
@@ -210,6 +227,9 @@ sirve. En ese caso, usa en `VPS_ENLACE` la dirección de la puerta de enlace de
    curl -s "https://<subdominio>/salud"
    echo | openssl s_client -servername <subdominio> -connect <subdominio>:443 2>/dev/null | openssl x509 -noout -issuer -dates
    ```
+   Si el proyecto todavía no se desplegó (PR #8 sin integrar), el subdominio
+   responde **502** hasta el primer despliegue. Eso es lo esperado: por ahora
+   verifica solo el certificado.
    Vuelve a medir los sitios existentes del paso 1: deben dar los mismos códigos.
    Si alguno cambió, **revierte** con la copia de respaldo, recarga y avísame.
 
