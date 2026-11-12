@@ -150,8 +150,36 @@ accesibilidad.
 
 ## 5. Medición sobre la URL pública
 
-*Pendiente:* se agrega al quedar instalado el proyecto en el VPS, con la misma
-metodología (mediana de tres corridas, perfil móvil) y la fecha de la corrida.
+Medición sobre <https://apparchar.sbs/proyecto/>, ya publicada en el VPS con
+HTTPS y desplegada desde `main` (commit `24b8f13`). Se usó **PageSpeed
+Insights**, que corre Lighthouse 13.6.0 desde los servidores de Google: perfil
+móvil (Moto G Power emulado, red y CPU limitadas por simulación), las cuatro
+categorías, una corrida por página, el 12 de noviembre de 2026 a las 9:48 a. m.
+(hora de Colombia). Así la medición incluye la red real hasta el VPS y el
+HTTPS, que en local no existían.
+
+| Página | Rendimiento | Accesibilidad | Buenas prácticas | SEO | FCP | LCP | TBT | CLS |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Cartelera (`app/index.html`) | **100** | 100 | 100 | 63 | 0,9 s | **0,9 s** | 0 ms | 0 |
+| Panel del organizador (`app/panel.html`) | **100** | 100 | 100 | 63 | 1,4 s | 1,4 s | 0 ms | 0 |
+| Detalle y compra (`app/detalle.html`) | 98 | 100 | 100 | 63 | 1,2 s | 1,2 s | 0 ms | 0 |
+| Publicar evento (`app/publicar.html`) | 98 | 100 | 100 | 63 | 1,3 s | 1,3 s | 0 ms | 0 |
+| Validar en la puerta (`app/puerta.html`) | 98 | 100 | 100 | 63 | 1,2 s | 1,2 s | 0 ms | 0 |
+
+**Lectura de los resultados:**
+
+- Las mejoras se mantienen en producción: la cartelera queda en 100 de
+  rendimiento con un LCP de 0,9 s (la línea base local era de 87 y 3,05 s), y
+  las cinco páginas tienen 100 de accesibilidad y de buenas prácticas, con CLS 0.
+- Las tres páginas en 98 pierden dos puntos por el Speed Index (3,7 s), que en
+  la red simulada de PageSpeed Insights mide cuánto tarda en completarse la
+  pantalla, no el primer pintado: FCP y LCP siguen por debajo de 1,5 s.
+- El SEO de 63 es la etiqueta `noindex` puesta a propósito (ver «Qué quedó
+  pendiente y por qué»).
+- A diferencia de las mediciones locales (mediana de tres corridas con
+  Lighthouse 13.5.0), PageSpeed Insights hace una corrida por página. Para
+  repetirla: <https://pagespeed.web.dev/>, con la URL de cada página y el modo
+  «Móvil».
 
 ## Cómo repetir la medición
 
