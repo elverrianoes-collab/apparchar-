@@ -1,0 +1,195 @@
+# Integración y entrega continuas de Apparchar.
+#
+#   revisar ──► compose ──► imagen ──► desplegar
+#   pruebas     el conjunto   GHCR      Render (solo main)
+#
+# En cada pull request corren «revisar» y «compose»: si una prueba falla, el PR no
+# se integra. Al integrar a main (o al etiquetar vX.Y.Z) además se publica la
+# imagen en ghcr.io/elverrianoes-collab/proyecto-tecweb y se despliega. Cada etapa
+# depende de la anterior: lo que falla no se publica y, sin imagen, no se despliega.
+#
+# Despliegue (docs/despliegue-vps.md):
+#   VPS (principal): el servidor despliega solo («pull»). Un temporizador revisa cada
+#     minuto si main tiene un commit nuevo con su imagen sha-<commit> publicada y,
+#     si la hay, la despliega. El CI no guarda llaves del servidor.
+#   Render (alternativa): con el secreto RENDER_DEPLOY_HOOK, el CI dispara el despliegue.
+# En los dos casos, la etapa «desplegar» espera hasta que URL_PUBLICA/salud informe
+# el commit recién integrado (variable URL_PUBLICA en Settings → Variables).
+name: CI/CD
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Nombre propio de la imagen del proyecto académico (el del repositorio termina
+  # en «-», que no es válido, y no debe chocar con ninguna otra imagen de la cuenta).
+  IMAGEN: ghcr.io/elverrianoes-collab/proyecto-tecweb
+
+jobs:
+  # 1. Contrato, coherencia y pruebas del backend (igual que `npm run revisar`).
+  revisar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Validar el contrato
+        run: npm run validar:api
+      - name: Verificar la coherencia
+        run: npm run verificar
+      - name: Probar el backend
+        run: npm test
+      - name: Revisar los scripts del despliegue en el VPS
+        run: shellcheck despliegue/vps/*.sh
+
+  # 2. El conjunto completo con un comando, como en una máquina limpia: construye
+  #    la imagen, levanta proxy + api + db + cache y comprueba que todo responda.
+  compose:
+    needs: revisar
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validar el compose del VPS
+        run: |
+          sed -e 's/__NOMBRE__/proyecto-ci/g' -e 's/__PUERTO__/18080/g' -e 's/__SUBDOMINIO__/proyecto.ejemplo.co/g' \
+              -e 's/__GENERAR__/valor-de-prueba/g' -e 's|^IMAGEN_API=$|IMAGEN_API=ghcr.io/elverrianoes-collab/proyecto-tecweb:sha-prueba|' \
+              despliegue/vps/env.ejemplo > "$RUNNER_TEMP/env-vps"
+          docker compose --env-file "$RUNNER_TEMP/env-vps" -f compose.yaml -f compose.vps.yaml config --quiet
+          docker compose --env-file "$RUNNER_TEMP/env-vps" -f compose.yaml -f compose.vps.yaml config --format json \
+            | python3 -c "import json,sys; c=json.load(sys.stdin); p=c['services']['proxy']['ports']; assert len(p)==1 and p[0]['host_ip']=='127.0.0.1', p; assert all(not s.get('ports') for n,s in c['services'].items() if n!='proxy'); print('El compose del VPS solo publica', p[0]['host_ip'] + ':' + p[0]['published'])"
+      - name: Levantar con un comando
+        run: docker compose up --build --detach --wait --wait-timeout 180
+      - name: Comprobar el conjunto
+        run: |
+          set -euo pipefail
+          base=http://localhost:8080
+          docker compose ps
+          curl -fsS "$base/salud" | tee salud.json
+          grep -q '"base_de_datos":"postgresql"' salud.json
+          grep -q '"cache":"valkey"' salud.json
+          curl -fsS -o /dev/null "$base/app/index.html"
+          primera=$(curl -fsS -o /dev/null -D - "$base/eventos" | tr -d '\r' | grep -i '^x-cache:')
+          segunda=$(curl -fsS -o /dev/null -D - "$base/eventos" | tr -d '\r' | grep -i '^x-cache:')
+          echo "cartelera: $primera → $segunda"
+          [ "${segunda#*: }" = "HIT" ]
+          curl -fsS -o /dev/null -H 'Accept-Encoding: gzip' -D cabeceras.txt "$base/app/css/estilos.css"
+          grep -qi '^content-encoding:' cabeceras.txt
+      - name: Los datos sobreviven a un reinicio
+        run: |
+          set -euo pipefail
+          base=http://localhost:8080
+          correo="ci-$GITHUB_RUN_ID@ejemplo.co"
+          curl -fsS -X POST "$base/organizadores" -H 'Content-Type: application/json' \
+            -d "{\"nombre\":\"Organizador del CI\",\"correo\":\"$correo\",\"telefono\":\"+573105550000\",\"municipio\":\"Yopal\",\"clave\":\"ClaveDelCI2026\"}" > /dev/null
+          docker compose restart
+          docker compose up --detach --wait --wait-timeout 120
+          curl -fsS -X POST "$base/sesiones" -H 'Content-Type: application/json' \
+            -d "{\"correo\":\"$correo\",\"clave\":\"ClaveDelCI2026\"}" | grep -q '"token"'
+          echo "El organizador creado antes del reinicio sigue en la base."
+      - name: Registros de los servicios
+        if: failure()
+        run: docker compose logs --no-color
+      - name: Bajar el conjunto
+        if: always()
+        run: docker compose down --volumes
+
+  # 3. Imagen versionada en GitHub Container Registry (solo main y etiquetas).
+  imagen:
+    needs: compose
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      etiquetas: ${{ steps.metadatos.outputs.tags }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: metadatos
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGEN }}
+          # sha-<commit completo> siempre (es lo que busca el VPS); latest en main;
+          # 0.4.0 y 0.4 al etiquetar v0.4.0.
+          tags: |
+            type=sha,prefix=sha-,format=long
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+          labels: |
+            org.opencontainers.image.title=Proyecto Tecnologías Web 2026-B
+            org.opencontainers.image.description=API y web del proyecto académico (boletería digital con QR para Casanare)
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: ejecucion
+          push: true
+          tags: ${{ steps.metadatos.outputs.tags }}
+          labels: ${{ steps.metadatos.outputs.labels }}
+          build-args: COMMIT_SHA=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # 4. Despliegue (solo main). En el VPS lo hace el propio servidor apenas ve la
+  #    imagen sha-<commit>; con Render se dispara aquí. Luego se espera hasta que la
+  #    URL pública sirva este commit.
+  desplegar:
+    needs: imagen
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: produccion
+      url: ${{ vars.URL_PUBLICA }}
+    concurrency:
+      group: despliegue-produccion
+      cancel-in-progress: false
+    steps:
+      - name: Disparar el despliegue en Render (si se usa)
+        env:
+          GANCHO: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$GANCHO" ]; then
+            echo "Sin RENDER_DEPLOY_HOOK: el VPS despliega solo cuando ve la imagen sha-${GITHUB_SHA}."
+            exit 0
+          fi
+          curl -fsS -X POST "$GANCHO" > /dev/null
+          echo "Render recibió la orden de desplegar ${GITHUB_SHA::7}."
+      - name: Verificar que la URL pública sirve este commit
+        env:
+          URL_PUBLICA: ${{ vars.URL_PUBLICA }}
+        run: |
+          if [ -z "$URL_PUBLICA" ]; then
+            echo "::warning::Falta la variable URL_PUBLICA (Settings → Secrets and variables → Actions → Variables): no se puede verificar el despliegue."
+            exit 0
+          fi
+          for intento in $(seq 1 60); do
+            commit=$(curl -fsS --max-time 20 "$URL_PUBLICA/salud" | sed -n 's/.*"commit":"\([0-9a-f]*\)".*/\1/p' || true)
+            if [ "$commit" = "$GITHUB_SHA" ]; then
+              echo "Desplegado: $URL_PUBLICA sirve ${GITHUB_SHA::7} (intento $intento)."
+              exit 0
+            fi
+            echo "Intento $intento: la URL sirve ${commit:-otra versión o no responde}; se espera 15 s."
+            sleep 15
+          done
+          echo "::error::Después de 15 minutos $URL_PUBLICA no sirve ${GITHUB_SHA::7}."
+          exit 1

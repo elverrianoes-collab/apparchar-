@@ -1,0 +1,7 @@
+# Bloque NUEVO para el subdominio del proyecto en un Caddy que ya existe en el VPS.
+# Se agrega al final del Caddyfile del servidor (o en un archivo importado), sin
+# cambiar los demás sitios. Caddy obtiene y renueva solo el certificado HTTPS.
+#   caddy validate --config /etc/caddy/Caddyfile  &&  systemctl reload caddy
+__SUBDOMINIO__ {
+	reverse_proxy 127.0.0.1:__PUERTO__
+}

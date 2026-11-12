@@ -1,0 +1,12 @@
+# Plantilla: /etc/systemd/system/__NOMBRE__-despliegue.timer
+[Unit]
+Description=__NOMBRE__: revisa cada minuto si hay una versión nueva para desplegar
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=1min
+AccuracySec=15s
+Unit=__NOMBRE__-despliegue.service
+
+[Install]
+WantedBy=timers.target

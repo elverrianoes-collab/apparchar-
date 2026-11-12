@@ -31,3 +31,7 @@ core
 core.[0-9]*
 *.zip
 *.tar.gz
+
+# Despliegue en el VPS: estado del agente y respaldos de la base (nunca se versionan)
+.despliegue/
+respaldos/
