@@ -18,6 +18,12 @@ const entorno = process.env.NODE_ENV || 'development';
 // servir al reiniciar). En producción el servidor se niega a arrancar sin ella.
 const CLAVE_PASARELA_DESARROLLO = 'pasarela-demo';
 
+// '' (raíz) o '/algo' sin barra final: '/proyecto/' y 'proyecto' quedan como '/proyecto'.
+function normalizarRutaBase(valor = '') {
+  const limpia = String(valor).trim().replace(/^\/+|\/+$/g, '');
+  return limpia ? `/${limpia}` : '';
+}
+
 export const config = {
   entorno,
   puerto: Number(process.env.PORT) || 3000,
@@ -33,6 +39,11 @@ export const config = {
   // Detrás de un proxy (Caddy en compose, el balanceador de Render) la IP del
   // cliente llega en X-Forwarded-For. TRUST_PROXY=1 confía en un salto; vacío, en ninguno.
   confiarEnProxy: process.env.TRUST_PROXY || '',
+  // Ruta bajo la que se publica el proyecto cuando el proxy del servidor lo sirve
+  // en una subcarpeta de otro dominio (por ejemplo, RUTA_BASE=/proyecto). El proxy
+  // quita ese prefijo antes de pasar la petición; la API solo lo usa para armar
+  // los enlaces absolutos (redirección de la raíz y servidor de la documentación).
+  rutaBase: normalizarRutaBase(process.env.RUTA_BASE),
   // Commit desplegado, para que /salud diga qué versión está corriendo.
   commit: process.env.RENDER_GIT_COMMIT || process.env.COMMIT_SHA || '',
 };

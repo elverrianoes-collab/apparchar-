@@ -1,0 +1,27 @@
+# Publicar el proyecto en una SUBCARPETA de un dominio que Traefik ya atiende.
+# Archivo de configuración dinámica NUEVO (proveedor «file»); no toca los routers
+# existentes. La prioridad alta hace que gane sobre el router de la otra aplicación
+# solo para las rutas que empiezan por __RUTA_BASE__.
+http:
+  routers:
+    __NOMBRE__:
+      rule: "Host(`__SUBDOMINIO__`) && (Path(`__RUTA_BASE__`) || PathPrefix(`__RUTA_BASE__/`))"
+      priority: 1000
+      entryPoints: [websecure]
+      tls: {}
+      middlewares: [__NOMBRE__-barra, __NOMBRE__-prefijo]
+      service: __NOMBRE__
+  middlewares:
+    __NOMBRE__-barra:
+      redirectRegex:
+        regex: "^(https?://[^/]+__RUTA_BASE__)$"
+        replacement: "${1}/"
+        permanent: true
+    __NOMBRE__-prefijo:
+      stripPrefix:
+        prefixes: ["__RUTA_BASE__"]
+  services:
+    __NOMBRE__:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:__PUERTO__"

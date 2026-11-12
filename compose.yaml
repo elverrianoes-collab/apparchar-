@@ -48,6 +48,8 @@ services:
       JWT_SECRETO: ${JWT_SECRETO:-}
       PASARELA_CLAVE: ${PASARELA_CLAVE:-}
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      # Subcarpeta pública cuando el proxy del servidor sirve el proyecto en /algo (vacío = raíz).
+      RUTA_BASE: ${RUTA_BASE:-}
       # Confía en los proxies de redes privadas (Caddy y, en un VPS, el proxy del
       # servidor): la IP del cliente es la primera dirección pública de X-Forwarded-For.
       TRUST_PROXY: ${TRUST_PROXY:-loopback,linklocal,uniquelocal}

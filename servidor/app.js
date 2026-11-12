@@ -38,7 +38,7 @@ function sinEjemplosEnParametros(paths) {
 
 const contratoParaDocs = {
   ...contrato,
-  servers: [{ url: '/', description: 'Este servidor (backend del MVP)' }],
+  servers: [{ url: `${config.rutaBase}/`, description: 'Este servidor (backend del MVP)' }],
   paths: sinEjemplosEnParametros(contrato.paths),
   components: {
     ...contrato.components,
@@ -85,14 +85,15 @@ export function crearApp({ db, cache = sinCache }) {
 
   // La raíz describe la API; un navegador que la abre va directo al panel web.
   app.get('/', (req, res) => {
-    if (req.accepts(['json', 'html']) === 'html') return res.redirect('/app/panel.html');
+    // Redirección relativa: sirve en la raíz y bajo la subcarpeta del proxy (RUTA_BASE).
+    if (req.accepts(['json', 'html']) === 'html') return res.redirect('app/panel.html');
     res.json({
       nombre: contrato.info.title,
       version: contrato.info.version,
-      documentacion: '/docs',
-      contrato: '/openapi.json',
-      salud: '/salud',
-      aplicacion: '/app/panel.html',
+      documentacion: `${config.rutaBase}/docs`,
+      contrato: `${config.rutaBase}/openapi.json`,
+      salud: `${config.rutaBase}/salud`,
+      aplicacion: `${config.rutaBase}/app/panel.html`,
     });
   });
 

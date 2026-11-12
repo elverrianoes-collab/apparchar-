@@ -49,9 +49,9 @@
 
   const estado = {
     base: '',
-    sesion: almacen.leer('apparchar.sesion'),
+    sesion: almacen.leer('tecweb.sesion'),
     eventos: [],
-    eventoSeleccionado: almacen.leer('apparchar.evento'),
+    eventoSeleccionado: almacen.leer('tecweb.evento'),
     eventoActual: null,
     ordenes: [],
   };
@@ -144,7 +144,12 @@
     const candidatos = [];
     const parametro = new URLSearchParams(location.search).get('api');
     if (parametro) candidatos.push(parametro.replace(/\/+$/, ''));
-    if (location.protocol.startsWith('http')) candidatos.push(location.origin);
+    if (location.protocol.startsWith('http')) {
+      // La API vive donde se sirve /app: en la raíz o bajo una subcarpeta (/proyecto/app/…).
+      const ruta = location.pathname.replace(/\/app(\/.*)?$/, '');
+      if (ruta !== location.pathname) candidatos.push(location.origin + ruta);
+      candidatos.push(location.origin);
+    }
     candidatos.push('http://localhost:3000');
     for (const base of [...new Set(candidatos)]) {
       try {
@@ -292,7 +297,7 @@
 
   function guardarSesion(sesion) {
     estado.sesion = sesion;
-    almacen.guardar('apparchar.sesion', sesion);
+    almacen.guardar('tecweb.sesion', sesion);
   }
 
   function sesionVencida(error) {
@@ -352,7 +357,7 @@
 
   function cerrarSesion() {
     guardarSesion(null);
-    almacen.guardar('apparchar.evento', null);
+    almacen.guardar('tecweb.evento', null);
     estado.eventos = [];
     pintarSesion();
     $('#sesion-correo').focus();
@@ -367,7 +372,7 @@
       document.getElementById(t.getAttribute('aria-controls')).hidden = !activa;
     }
     if (enfocar) tab.focus();
-    almacen.guardar('apparchar.pestana', tab.id);
+    almacen.guardar('tecweb.pestana', tab.id);
     const al = { 'tab-cuenta': pintarCuenta, 'tab-eventos': cargarEventos, 'tab-tipos': cargarTipos, 'tab-ordenes': cargarOrdenes, 'tab-puerta': cargarLecturas, 'tab-pruebas': pintarPruebas };
     al[tab.id]?.();
   }
@@ -437,7 +442,7 @@
 
   function seleccionarEvento(id) {
     estado.eventoSeleccionado = id;
-    almacen.guardar('apparchar.evento', id);
+    almacen.guardar('tecweb.evento', id);
     $$('[data-selector-evento]').forEach((s) => { s.value = id; });
   }
 
@@ -920,7 +925,7 @@
       if (estado.sesion) {
         // El token guardado se comprueba con una ruta protegida; si no sirve, se pide iniciar sesión.
         api('GET', `/organizadores/${yo().id}/eventos?por_pagina=50`).then(() => {
-          const guardada = almacen.leer('apparchar.pestana');
+          const guardada = almacen.leer('tecweb.pestana');
           activarPestana(document.getElementById(guardada) || $('#tab-cuenta'));
         }).catch(() => {});
       }

@@ -65,7 +65,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validar el compose del VPS
         run: |
-          sed -e 's/__NOMBRE__/proyecto-ci/g' -e 's/__PUERTO__/18080/g' -e 's/__SUBDOMINIO__/proyecto.ejemplo.co/g' \
+          sed -e 's/__NOMBRE__/proyecto-ci/g' -e 's/__PUERTO__/18080/g' -e 's/__SUBDOMINIO__/proyecto.ejemplo.co/g' -e 's|__RUTA_BASE__||g' \
               -e 's/__GENERAR__/valor-de-prueba/g' -e 's|^IMAGEN_API=$|IMAGEN_API=ghcr.io/elverrianoes-collab/proyecto-tecweb:sha-prueba|' \
               despliegue/vps/env.ejemplo > "$RUNNER_TEMP/env-vps"
           docker compose --env-file "$RUNNER_TEMP/env-vps" -f compose.yaml -f compose.vps.yaml config --quiet

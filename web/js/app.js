@@ -33,13 +33,13 @@
   const ahoraPrototipo = () => new Date(INICIO_PROTOTIPO + (Date.now() - INICIO_REAL));
 
   const CLAVES = {
-    boletas: 'apparchar.boletas',
-    ordenes: 'apparchar.ordenes',
-    vendidas: 'apparchar.vendidas',
-    validaciones: 'apparchar.validaciones',
-    portero: 'apparchar.portero',
-    eventos: 'apparchar.eventos',
-    organizadores: 'apparchar.organizadores',
+    boletas: 'tecweb.boletas',
+    ordenes: 'tecweb.ordenes',
+    vendidas: 'tecweb.vendidas',
+    validaciones: 'tecweb.validaciones',
+    portero: 'tecweb.portero',
+    eventos: 'tecweb.eventos',
+    organizadores: 'tecweb.organizadores',
   };
 
   const CATEGORIAS = {
