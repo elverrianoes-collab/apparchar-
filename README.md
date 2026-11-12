@@ -1,6 +1,6 @@
 # Plataforma Apparchar
 
-**Aplicación desplegada (HTTPS):** _pendiente: se publica al instalar el proyecto en el VPS (ver [Despliegue](#despliegue))._ ·
+**Aplicación desplegada (HTTPS):** <https://apparchar.sbs/proyecto/> (cartelera en [`/proyecto/app/`](https://apparchar.sbs/proyecto/app/), Swagger UI en [`/proyecto/docs/`](https://apparchar.sbs/proyecto/docs/), salud en [`/proyecto/salud`](https://apparchar.sbs/proyecto/salud)) ·
 **Imagen:** [`ghcr.io/elverrianoes-collab/proyecto-tecweb`](https://github.com/users/elverrianoes-collab/packages/container/package/proyecto-tecweb) ·
 **Diagrama:** [arquitectura de despliegue](#arquitectura-de-despliegue)
 
@@ -176,7 +176,8 @@ servidor pone el HTTPS del subdominio, y el proyecto solo escucha en
    settings* → *Change visibility*), para que el servidor lo descargue sin
    credenciales.
 3. En GitHub, *Settings → Secrets and variables → Actions → Variables*: crear
-   `URL_PUBLICA` con `https://<subdominio>`.
+   `URL_PUBLICA` con la dirección pública (en este despliegue,
+   `https://apparchar.sbs/proyecto`).
 
 **Alternativa: Render.** [`render.yaml`](render.yaml) despliega el mismo
 `Dockerfile` en Render. El CI lo dispara si existe el secreto
@@ -200,7 +201,7 @@ ninguno de los dos tiene puertos en el host. Las decisiones están en
 | Anteproyecto, prototipo y contrato (Entregas 1 y 2) | ✅ Entregados |
 | MVP del backend: CRUD de cuatro recursos, autenticación, validación y documentación (Entrega 3) | ✅ Entregado |
 | Contenerización, compose, CI/CD, diagrama e informe de rendimiento (Entrega 4) | ✅ En este repositorio |
-| URL pública en el VPS | ⏳ Pendiente de instalar (configuración inicial de [Despliegue](#despliegue)) |
+| URL pública en el VPS | ✅ <https://apparchar.sbs/proyecto/>, con despliegue automático desde `main` |
 | Entrega 5: funcionalidades congeladas, auditoría de accesibilidad y seguridad | ⏳ Pendiente |
 
 ## Cómo ejecutarlo
