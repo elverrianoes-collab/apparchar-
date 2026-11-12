@@ -31,7 +31,7 @@ describe('Documentación y salud', () => {
   test('el servidor publica la web en /app y un navegador que abre / llega al panel', async () => {
     const raiz = await ctx.api.get('/').set('Accept', 'text/html,application/xhtml+xml');
     assert.equal(raiz.status, 302);
-    assert.equal(raiz.headers.location, '/app/panel.html');
+    assert.equal(raiz.headers.location, 'app/panel.html');
     const panel = await ctx.api.get('/app/panel.html');
     assert.equal(panel.status, 200);
     assert.match(panel.headers['content-type'], /text\/html/);

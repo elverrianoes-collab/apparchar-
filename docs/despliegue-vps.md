@@ -35,6 +35,23 @@ Internet ──HTTPS──► proxy del servidor (ya existía: nginx, Caddy o Tr
 | Despliegue | `proyecto-despliegue.timer` (cada minuto) → `despliegue/vps/actualizar.sh` |
 | Respaldos | `proyecto-respaldo.timer` (diario, 03:30) → `/opt/proyecto/respaldos/` (7 días) |
 
+### Publicación en una subcarpeta
+
+Cuando el proyecto no tiene subdominio propio, se publica en una subcarpeta de un
+dominio que ya atiende otra aplicación (en este servidor,
+`https://apparchar.sbs/proyecto/`):
+
+- El proxy del servidor recibe `/proyecto/…`, quita el prefijo y pasa la petición
+  a `127.0.0.1:VPS_PUERTO`. Las plantillas son `proxy-servidor/nginx-ruta.conf.ejemplo`,
+  `Caddyfile-ruta.ejemplo` y `traefik-ruta.yml.ejemplo`; se agregan al sitio
+  existente sin cambiar sus otras reglas.
+- `RUTA_BASE=/proyecto` en el `.env` le dice a la API bajo qué ruta la ven los
+  navegadores: la raíz redirige a `app/panel.html` (relativa) y Swagger UI usa
+  `/proyecto/` como servidor.
+- La web usa rutas relativas y el panel busca la API en la misma subcarpeta, así
+  que ninguna petición sale de `/proyecto/`. Las claves de `sessionStorage` usan el
+  prefijo `tecweb.` para no chocar con las de la otra aplicación del mismo origen.
+
 ## Cómo se despliega una versión
 
 1. Un pull request se integra a `main`.

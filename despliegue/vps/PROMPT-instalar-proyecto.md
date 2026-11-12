@@ -29,16 +29,36 @@ ya trae todo lo necesario para este servidor:
 - `despliegue/vps/proxy-servidor/`: plantillas del sitio para nginx, Caddy o Traefik.
 - `docs/despliegue-vps.md`: cómo funciona y cómo se opera.
 
-> **Mientras el PR 3 de la Entrega 4 (CI/CD y despliegue) no esté integrado**,
-> `main` todavía no trae estos archivos. Están en la rama de referencia
-> `feature/contenerizacion`. La fase 1 lo detecta y deja la copia en esa rama, para
-> preparar todo desde ya. El agente siempre sigue `main`, así que el primer
-> despliegue ocurre solo, unos minutos después de que el PR 3 se integre y el CI
-> publique la imagen.
+> **Estado del repositorio (12 de noviembre de 2026).** La publicación en una
+> subcarpeta (`RUTA_BASE` y las plantillas `*-ruta.*`) llega con el pull request
+> «Permite publicar el proyecto en una subcarpeta». Si `despliegue/vps/proxy-servidor/nginx-ruta.conf.ejemplo`
+> no existe en `main`, detente y avísame: falta integrarlo.
+>
+> Los PR 1, 2 y 3 de la
+> Entrega 4 ya están integrados en `main` (#10, #11 y #12), así que `main` trae
+> todos los archivos de despliegue. El CI de cada integración a `main` publica la
+> imagen del commit; el agente la despliega sola. El PR 4 (rendimiento y
+> documentación) se despliega también solo cuando se integre.
 
 **Este servidor ya está en producción con otra aplicación** (la versión comercial
 de Apparchar, que no es este proyecto). Esa aplicación tiene prioridad absoluta:
 este proyecto se instala a su lado, aislado, sin tocar nada de ella.
+
+### Dónde se publica
+
+El proyecto se publica en una **subcarpeta del dominio de esa otra aplicación**:
+
+**`https://apparchar.sbs/proyecto/`**
+
+- El proxy del servidor ya atiende `apparchar.sbs` con HTTPS. Solo se le **agregan**
+  las reglas de `/proyecto` dentro del sitio existente; no hace falta DNS nuevo ni
+  certificado nuevo.
+- El proxy quita el prefijo `/proyecto` antes de pasar la petición al proyecto
+  (`/proyecto/salud` llega como `/salud`). La API lo sabe por `RUTA_BASE=/proyecto`
+  en el `.env`: con eso arma la redirección de la raíz y el servidor de Swagger UI.
+  La web usa rutas relativas y encuentra la API bajo la misma subcarpeta.
+- Todo lo que no empiece por `/proyecto` sigue yendo a la otra aplicación, igual
+  que hoy.
 
 ### Identidad del proyecto en el servidor
 
@@ -73,7 +93,9 @@ Usa estos valores en todo: nombres, carpetas, usuarios, unidades y proyecto de c
    proyecto solo escucha en la dirección interna. El HTTPS lo pone el proxy que ya
    tiene el servidor.
 5. **El proxy del servidor solo se toca con mi aprobación**, y solo para
-   **agregar** el sitio del subdominio del proyecto. Antes de cambiarlo, haz una
+   **agregar** las reglas de `/proyecto` dentro del sitio `apparchar.sbs`. No
+   cambies ninguna otra línea de ese sitio (ni su `location /`, ni sus
+   certificados, ni sus cabeceras). Antes de cambiarlo, haz una
    copia de su configuración y guarda el estado de los sitios existentes. Valida la
    configuración antes de aplicarla, usa `reload` y nunca `restart`, y comprueba
    después que los sitios existentes responden igual que antes. Si ese proxy corre
@@ -95,10 +117,11 @@ Usa estos valores en todo: nombres, carpetas, usuarios, unidades y proyecto de c
 
 ## Antes de empezar, pídeme
 
-- **El subdominio** del proyecto (por ejemplo, `proyecto.midominio.com`) y si ya
-  creé el registro DNS `A` (o `AAAA`) que apunta a este servidor.
-- **Un correo** para los avisos del certificado (Let's Encrypt), si el proxy del
-  servidor es nginx con certbot.
+- **Confirmación de la dirección pública:** `https://apparchar.sbs/proyecto/`.
+  Comprueba en la fase 0 que la otra aplicación **no use ya** rutas que empiecen
+  por `/proyecto` (`curl -s -o /dev/null -w '%{http_code}' https://apparchar.sbs/proyecto/`
+  debe dar 404 o la página de «no encontrado» de esa aplicación). Si responde
+  otra cosa, detente y pregúntame.
 - **Si quiero cargar los datos de demostración** al terminar (solo con la base vacía).
 
 ## Fase 0 · Reconocimiento (solo lectura)
@@ -142,15 +165,12 @@ El informe debe decir:
 
 ```bash
 NOMBRE=proyecto; DIR=/opt/$NOMBRE; PUERTO=18080       # los valores acordados en la fase 0
-SUBDOMINIO=proyecto.midominio.com                       # el subdominio que te di
+SUBDOMINIO=apparchar.sbs                                # dominio público (compartido con la otra aplicación)
+RUTA_BASE=/proyecto                                     # subcarpeta del proyecto
 sudo useradd --system --create-home --home-dir /var/lib/$NOMBRE --shell /usr/sbin/nologin "$NOMBRE"
 sudo usermod -aG docker "$NOMBRE"
 sudo install -d -o "$NOMBRE" -g "$NOMBRE" -m 755 "$DIR"
 sudo -u "$NOMBRE" git clone https://github.com/elverrianoes-collab/apparchar- "$DIR"
-# Si main todavía no trae los archivos de despliegue (PR 3 sin integrar), usa la rama de referencia.
-if [ ! -f "$DIR/compose.vps.yaml" ]; then
-  sudo -u "$NOMBRE" git -C "$DIR" checkout --quiet feature/contenerizacion && echo "Copia en la rama de referencia de la Entrega 4"
-fi
 ls "$DIR/compose.vps.yaml" "$DIR/despliegue/vps/actualizar.sh"   # deben existir los dos
 ```
 
@@ -160,7 +180,7 @@ Crea el `.env` a partir de la plantilla, con secretos nuevos y sin mostrarlos:
 cd "$DIR"
 sudo -u "$NOMBRE" cp despliegue/vps/env.ejemplo .env
 sudo chmod 600 .env
-sudo -u "$NOMBRE" sed -i -e "s|__NOMBRE__|$NOMBRE|g" -e "s|__PUERTO__|$PUERTO|g" -e "s|__SUBDOMINIO__|$SUBDOMINIO|g" .env
+sudo -u "$NOMBRE" sed -i -e "s|__NOMBRE__|$NOMBRE|g" -e "s|__PUERTO__|$PUERTO|g" -e "s|__SUBDOMINIO__|$SUBDOMINIO|g" -e "s|__RUTA_BASE__|$RUTA_BASE|g" .env
 for clave in JWT_SECRETO PASARELA_CLAVE POSTGRES_PASSWORD; do
   sudo -u "$NOMBRE" sed -i "s|^$clave=__GENERAR__|$clave=$(openssl rand -base64 48 | tr -d '\n/+=')|" .env
 done
@@ -181,14 +201,11 @@ sirve. En ese caso, usa en `VPS_ENLACE` la dirección de la puerta de enlace de
    - Si responde **denied** o **unauthorized**: el paquete es privado. Pídeme que
      lo haga público (GitHub → perfil → *Packages* → `proyecto-tecweb` →
      *Package settings* → *Change visibility* → *Public*) y espera.
-   - Si responde **manifest unknown** y `git -C "$DIR" ls-tree origin/main compose.vps.yaml`
-     no muestra nada: el PR 3 todavía no está integrado, así que no hay imagen
-     para `main`. **No esperes**: sigue con las fases 3 y 4 y avísame. El agente hará
-     el primer despliegue solo cuando el PR 3 se integre; entonces se completan los
-     pasos 2 y 3 de esta fase y la fase 5.
-   - Si responde **manifest unknown** con el PR 3 ya integrado: el CI todavía no
-     termina para ese commit o falló. Revísalo en la pestaña *Actions* del
-     repositorio, avísame y espera.
+   - Si responde **manifest unknown**: el CI todavía no termina para ese commit
+     (tarda unos 5 a 7 minutos desde la integración) o falló. Revisa la pestaña
+     *Actions* del repositorio. Mientras termina, **no esperes**: sigue con las
+     fases 3 y 4 y avísame. El agente hará el primer despliegue solo en cuanto la
+     imagen exista; entonces se completan los pasos 2 y 3 de esta fase y la fase 5.
 2. Ejecuta el agente una vez, a mano:
    ```bash
    sudo -u "$NOMBRE" bash "$DIR/despliegue/vps/actualizar.sh"
@@ -203,35 +220,47 @@ sirve. En ese caso, usa en `VPS_ENLACE` la dirección de la puerta de enlace de
 4. Si pedí datos de demostración y la base está vacía:
    `cd "$DIR" && sudo -u "$NOMBRE" docker compose exec api node servidor/db/semilla.js`
 
-## Fase 3 · Subdominio con HTTPS en el proxy del servidor
+## Fase 3 · Publicar en `https://apparchar.sbs/proyecto/`
 
 1. **Estado previo.** Guarda en la bitácora la lista de sitios que atiende el proxy
    (`sudo nginx -T | grep server_name`, el Caddyfile o la configuración de
    Traefik) y el código HTTP de cada uno, con
-   `curl -s -o /dev/null -w '%{http_code}' https://<sitio>`.
-2. **DNS.** Comprueba que `dig +short <subdominio>` devuelva la IP pública del
-   servidor. Si no, detente y avísame.
-3. **Propuesta.** Muéstrame exactamente qué archivo vas a crear o qué bloque vas a
-   agregar, a partir de la plantilla que corresponda en
-   `despliegue/vps/proxy-servidor/`. **Espera mi aprobación.**
+   `curl -s -o /dev/null -w '%{http_code}' https://<sitio>`. Mide también 3 o 4
+   rutas reales de `apparchar.sbs` (la raíz, su API, un archivo estático).
+2. **Ubicar el sitio.** Encuentra el archivo y el bloque que atienden
+   `apparchar.sbs` en el puerto 443 (`sudo nginx -T | grep -n "server_name.*apparchar.sbs"`).
+3. **Propuesta.** Muéstrame el archivo, la línea exacta donde vas a insertar y el
+   texto, a partir de la plantilla que corresponda:
+   - nginx: `despliegue/vps/proxy-servidor/nginx-ruta.conf.ejemplo`
+   - Caddy: `despliegue/vps/proxy-servidor/Caddyfile-ruta.ejemplo`
+   - Traefik: `despliegue/vps/proxy-servidor/traefik-ruta.yml.ejemplo` (archivo nuevo)
+
+   Reemplaza `__RUTA_BASE__` por `/proyecto`, `__PUERTO__` por `$PUERTO`,
+   `__SUBDOMINIO__` por `apparchar.sbs` y `__NOMBRE__` por `$NOMBRE`.
+   **Espera mi aprobación.**
 4. **Aplicar**, según el proxy:
-   - **nginx:** respalda `/etc/nginx` (`sudo tar czf /var/lib/$NOMBRE/nginx-antes.tgz /etc/nginx`),
-     crea el sitio nuevo, ejecuta `sudo nginx -t` y luego `sudo systemctl reload nginx`.
-     Después ejecuta `sudo certbot --nginx -d <subdominio> -m <correo> --agree-tos --redirect --non-interactive`,
-     que solo toca el bloque de ese subdominio.
-   - **Caddy en el servidor:** respalda el Caddyfile y agrega el bloque al final.
-     Ejecuta `caddy validate --config /etc/caddy/Caddyfile` y luego `sudo systemctl reload caddy`.
-   - **Traefik u otro:** propone la configuración dinámica a partir de la plantilla
-     y espera mi aprobación.
+   - **nginx:** respalda `/etc/nginx` (`sudo tar czf /var/lib/$NOMBRE/nginx-antes.tgz /etc/nginx`)
+     y copia aparte el archivo del sitio. Pega los dos `location` **dentro** del
+     `server` de `apparchar.sbs` del puerto 443, **antes** de su `location /`.
+     Ejecuta `sudo nginx -t` y solo si da `ok`, `sudo systemctl reload nginx`.
+     No hace falta certbot: el sitio ya tiene su certificado.
+   - **Caddy en el servidor:** respalda el Caddyfile, pega las líneas dentro del
+     bloque `apparchar.sbs`, antes de su `reverse_proxy`. Ejecuta
+     `caddy validate --config /etc/caddy/Caddyfile` y luego `sudo systemctl reload caddy`.
+   - **Traefik:** crea el archivo dinámico nuevo a partir de la plantilla (ajusta
+     `entryPoints` y `tls` a los que usa el router existente de `apparchar.sbs`).
+   - Si el proxy corre en un contenedor de la otra aplicación, **no lo modifiques**:
+     explícame las opciones y espera.
 5. **Verificar:**
    ```bash
-   curl -s "https://<subdominio>/salud"
-   echo | openssl s_client -servername <subdominio> -connect <subdominio>:443 2>/dev/null | openssl x509 -noout -issuer -dates
+   curl -s https://apparchar.sbs/proyecto/salud                          # estado ok, postgresql, valkey y el commit
+   curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' https://apparchar.sbs/proyecto      # 301 a /proyecto/
+   curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' -H 'Accept: text/html' https://apparchar.sbs/proyecto/   # 302 a /proyecto/app/panel.html
+   curl -s -o /dev/null -w '%{http_code}\n' https://apparchar.sbs/proyecto/docs/                # 200
    ```
-   Si el proyecto todavía no se desplegó (PR 3 sin integrar), el subdominio
-   responde **502** hasta el primer despliegue. Eso es lo esperado: por ahora
-   verifica solo el certificado.
-   Vuelve a medir los sitios existentes del paso 1: deben dar los mismos códigos.
+   Si el proyecto todavía no se desplegó (imagen aún sin publicar), `/proyecto/`
+   responde **502** hasta el primer despliegue. Eso es lo esperado.
+   **Vuelve a medir los sitios y rutas del paso 1:** deben dar los mismos códigos.
    Si alguno cambió, **revierte** con la copia de respaldo, recarga y avísame.
 
 ## Fase 4 · Automatización
@@ -252,10 +281,13 @@ journalctl -u "$NOMBRE-despliegue.service" -n 20 --no-pager
 
 Marca cada punto con su evidencia (comando y resultado, sin secretos):
 
-- [ ] `https://<subdominio>/` abre el panel, `/app/` la cartelera y `/docs` Swagger UI.
-- [ ] `https://<subdominio>/salud` responde `postgresql`, `valkey` y el commit de `main`.
-- [ ] El certificado es válido, lo emite Let's Encrypt (u otra autoridad
-      reconocida), no vence este semestre y se renueva solo (`systemctl list-timers | grep -i certbot`, o Caddy).
+- [ ] `https://apparchar.sbs/proyecto/` abre el panel y dice «Conectado a la API en
+      https://apparchar.sbs/proyecto»; `/proyecto/app/index.html` abre la cartelera y
+      `/proyecto/docs/` Swagger UI, cuyo servidor es `/proyecto/`.
+- [ ] `https://apparchar.sbs/proyecto/salud` responde `postgresql`, `valkey` y el commit de `main`.
+- [ ] En las herramientas del navegador (pestaña *Red*), el panel no hace ninguna
+      petición fuera de `/proyecto/`.
+- [ ] El certificado de `apparchar.sbs` es el mismo de antes y sigue válido.
 - [ ] Los datos sobreviven a un reinicio: crea un organizador de prueba con
       `POST /organizadores`, ejecuta `docker compose restart` (en `$DIR`, como
       `$NOMBRE`), inicia sesión con él y bórralo con `DELETE /organizadores/{id}`.
@@ -275,7 +307,7 @@ Marca cada punto con su evidencia (comando y resultado, sin secretos):
    resultados de cada fase, **sin ningún secreto**.
 3. Lo que debo configurar en GitHub: en el repositorio, *Settings → Secrets and
    variables → Actions → Variables*, la variable `URL_PUBLICA` con
-   `https://<subdominio>`. Con ella, la etapa «desplegar» del CI comprueba cada
+   `https://apparchar.sbs/proyecto`. Con ella, la etapa «desplegar» del CI comprueba cada
    despliegue.
 
 ## Operación, para después

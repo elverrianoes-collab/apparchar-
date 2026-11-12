@@ -1,0 +1,27 @@
+# Bloques para publicar el proyecto en una SUBCARPETA de un dominio que ya atiende
+# otra aplicación: https://__SUBDOMINIO____RUTA_BASE__/
+# No se crea un sitio nuevo: estos dos «location» se AGREGAN dentro del bloque
+# «server { listen 443 ssl; server_name __SUBDOMINIO__; … }» que ya existe, sin
+# cambiar nada más. El HTTPS es el que ese sitio ya tiene; no hace falta certbot.
+#   1. Respaldar: tar czf /var/lib/__NOMBRE__/nginx-antes.tgz /etc/nginx
+#   2. Pegar los bloques ANTES del «location /» de la otra aplicación.
+#   3. nginx -t  &&  systemctl reload nginx        (reload, nunca restart)
+
+    # Sin barra final → con barra, para que las rutas relativas de la web resuelvan bien.
+    location = __RUTA_BASE__ {
+        return 301 __RUTA_BASE__/;
+    }
+
+    # La barra final de proxy_pass quita el prefijo: /proyecto/salud llega como /salud.
+    location ^~ __RUTA_BASE__/ {
+        proxy_pass http://127.0.0.1:__PUERTO__/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Prefix __RUTA_BASE__;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_redirect / __RUTA_BASE__/;
+        proxy_read_timeout 60s;
+        client_max_body_size 1m;
+    }

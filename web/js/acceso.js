@@ -4,7 +4,7 @@
 (() => {
   'use strict';
   let sesion = null;
-  try { sesion = JSON.parse(sessionStorage.getItem('apparchar.sesion')); } catch { /* sin almacenamiento */ }
+  try { sesion = JSON.parse(sessionStorage.getItem('tecweb.sesion')); } catch { /* sin almacenamiento */ }
   if (!sesion?.organizador || new Date(sesion.expira_en) <= new Date()) return;
   for (const enlace of document.querySelectorAll('[data-acceso]')) {
     enlace.href = 'panel.html';

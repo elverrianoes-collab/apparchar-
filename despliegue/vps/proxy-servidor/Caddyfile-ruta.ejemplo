@@ -1,0 +1,13 @@
+# Publicar el proyecto en una SUBCARPETA del sitio que ya existe en el Caddy del
+# servidor: https://__SUBDOMINIO__/... Se AGREGAN estas líneas dentro del bloque
+# «__SUBDOMINIO__ { … }» existente, ANTES de su reverse_proxy de la otra aplicación.
+# caddy validate --config /etc/caddy/Caddyfile  &&  systemctl reload caddy
+
+	redir __RUTA_BASE__ __RUTA_BASE__/ 308
+	handle_path __RUTA_BASE__/* {
+		reverse_proxy 127.0.0.1:__PUERTO__ {
+			header_up X-Forwarded-Prefix __RUTA_BASE__
+			# Las redirecciones absolutas de la API (/docs → /docs/) vuelven con el prefijo.
+			header_down Location ^/ __RUTA_BASE__/
+		}
+	}
