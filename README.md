@@ -1,14 +1,28 @@
 # Plataforma Apparchar
 
+**Aplicación desplegada (HTTPS):** _pendiente: se publica al instalar el proyecto en el VPS (ver [Despliegue](#despliegue))._ ·
+**Imagen:** [`ghcr.io/elverrianoes-collab/proyecto-tecweb`](https://github.com/users/elverrianoes-collab/packages/container/package/proyecto-tecweb) ·
+**Diagrama:** [arquitectura de despliegue](#arquitectura-de-despliegue)
+
 Plataforma web para que organizadores de eventos de Casanare vendan boletas con
 código QR y controlen el aforo en la puerta. Este repositorio contiene el
 **backend del MVP** (API REST con Node.js, Express y PostgreSQL), su contrato
 OpenAPI 3.1, el modelo de datos y el prototipo web navegable.
 
-**Documentación de la API:** Swagger UI en <http://localhost:3000/docs> al correr `npm run api` ·
+**Documentación de la API:** Swagger UI en `/docs` (<http://localhost:8080/docs> con `docker compose up`) ·
 **Postman:** [`postman/apparchar-mvp.postman_collection.json`](postman/apparchar-mvp.postman_collection.json) ·
-**Contrato:** [`api/openapi.yaml`](api/openapi.yaml) · **Modelo de datos:** [`docs/modelo-datos.md`](docs/modelo-datos.md) · **Versión:** 0.3.0 (MVP) ·
+**Contrato:** [`api/openapi.yaml`](api/openapi.yaml) · **Modelo de datos:** [`docs/modelo-datos.md`](docs/modelo-datos.md) · **Versión:** 0.4.0 (Entrega 4) ·
 **Prototipo publicado:** <https://elverrianoes-collab.github.io/apparchar-/>
+
+## Cumplimiento de la Entrega 4
+
+| Producto | Dónde está | Cómo se comprueba |
+|---|---|---|
+| **Aplicación contenerizada** | [`Dockerfile`](Dockerfile) multietapa, [`compose.yaml`](compose.yaml) (proxy, api, db, cache), [`.dockerignore`](.dockerignore) | `docker compose up` en una carpeta nueva; `docker compose ps` muestra los cuatro servicios `healthy`. Ver [Levantar con Docker](#levantar-con-docker). |
+| **Despliegue público con HTTPS** | VPS: [`compose.vps.yaml`](compose.vps.yaml), [`despliegue/vps/`](despliegue/vps/) y [`docs/despliegue-vps.md`](docs/despliegue-vps.md). Alternativa: [`render.yaml`](render.yaml) | La URL del inicio de este README; `GET /salud` informa la base, la caché y el commit desplegado. |
+| **Integración y entrega continuas** | [`.github/workflows/ci-cd.yaml`](.github/workflows/ci-cd.yaml) | Pestaña *Actions*: `revisar → compose → imagen → desplegar`. Lo que falla no se publica ni se despliega. |
+| **Diagrama de arquitectura** | [`docs/arquitectura-despliegue.png`](docs/arquitectura-despliegue.png) (fuente SVG al lado) | Insertado en [Arquitectura de despliegue](#arquitectura-de-despliegue). |
+| **Informe de rendimiento** | [`docs/informe-rendimiento.md`](docs/informe-rendimiento.md) | Lighthouse antes y después: rendimiento 87 → 100, LCP 3,05 s → 1,66 s, y accesibilidad 100 en las cinco páginas. |
 
 ## Cumplimiento del MVP
 
@@ -56,9 +70,142 @@ hizo su autor con su propia cuenta y todos pasaron la revisión automática:
 | [#3](https://github.com/elverrianoes-collab/apparchar-/pull/3) · CRUD de tipos de boleta, wireframes y evidencias | @Wilcheszz | @sneyderuva | @sneyderuva |
 | [#4](https://github.com/elverrianoes-collab/apparchar-/pull/4) · CRUD de órdenes, pago, boletas y validación en la puerta | @JuanRivera-hub | @sneyderuva | @sneyderuva |
 
+## Levantar con Docker
+
+Requisito: **Docker** con Compose v2 (Docker Desktop en Windows y macOS). No hace
+falta Node.js, PostgreSQL ni un archivo `.env`.
+
+1. Clona el repositorio:
+   ```bash
+   git clone https://github.com/elverrianoes-collab/apparchar-.git
+   cd apparchar-
+   ```
+2. Levanta el conjunto completo con un comando:
+   ```bash
+   docker compose up --build --wait
+   ```
+   Construye la imagen de la API y arranca `proxy` (Caddy), `api`, `db`
+   (PostgreSQL 17) y `cache` (Valkey 8). `--wait` termina cuando los cuatro están
+   `healthy` (unos 30 s después de la primera descarga de imágenes).
+3. Abre **<http://localhost:8080/>**: el panel del organizador. La cartelera está
+   en <http://localhost:8080/app/>, Swagger UI en <http://localhost:8080/docs> y la
+   salud del conjunto en <http://localhost:8080/salud>.
+4. *(Opcional)* Carga los datos de demostración de Casanare (organizador
+   `demo@apparchar.co`, clave `Apparchar2026`):
+   ```bash
+   docker compose exec api node servidor/db/semilla.js
+   ```
+5. Para detenerlo: `docker compose down`. Los datos quedan en el volumen
+   `datos-postgres` y vuelven al levantarlo; `docker compose down --volumes` los
+   borra.
+
+Sin `.env`, la API arranca en modo de desarrollo: los tokens se firman con una
+clave aleatoria que cambia al reiniciar. Para un servidor, copia `.env.example`
+como `.env` y define al menos `NODE_ENV=production`, `JWT_SECRETO`,
+`PASARELA_CLAVE` y `POSTGRES_PASSWORD`. Con `DOMINIO` y los puertos 80 y 443,
+Caddy obtiene y renueva solo el certificado HTTPS.
+
+## Variables de entorno
+
+Todas están en [`.env.example`](.env.example), sin valores reales. En el VPS se
+generan al instalar y viven solo en el `.env` del servidor; en la alternativa de
+Render las define [`render.yaml`](render.yaml).
+
+| Variable | Para qué sirve | ¿Obligatoria? |
+|---|---|---|
+| `NODE_ENV` | `development`, `test` o `production`. En producción la API no arranca sin `JWT_SECRETO` y `PASARELA_CLAVE`. | En producción |
+| `PORT` | Puerto HTTP de la API (3000). | No |
+| `DATABASE_URL` | PostgreSQL 17 (`postgres://usuario:clave@servidor:5432/base`). Vacía: PGlite en `.datos/pglite`. | En producción |
+| `PGLITE_DIR` | Carpeta de PGlite cuando no hay `DATABASE_URL`. | No |
+| `JWT_SECRETO` | Clave con la que se firman los tokens de sesión (HS256). | En producción |
+| `PASARELA_CLAVE` | Clave que la pasarela envía en `X-Clave-Pasarela` para confirmar pagos. | En producción |
+| `CORS_ORIGIN` | Orígenes que pueden llamar a la API desde el navegador (por defecto, `*`). | No |
+| `REDIS_URL` | Valkey/Redis para la caché de la cartelera y el límite de intentos. Vacía: sin caché. | No |
+| `CACHE_CARTELERA_SEGUNDOS` | Vida de la cartelera en la caché (30 s). | No |
+| `TRUST_PROXY` | En qué proxies se confía para leer la IP del cliente: los de redes privadas en compose (`loopback,linklocal,uniquelocal`), `1` en Render. | Detrás de un proxy |
+| `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Usuario, clave y base del servicio `db` del compose. | En un servidor |
+| `PUERTO_HTTP`, `PUERTO_HTTPS` | Puertos del host para el proxy (8080 y 8443; 80 y 443 en un servidor). | No |
+| `DOMINIO` | Dominio del proxy; con uno real, Caddy sirve HTTPS con Let's Encrypt. | Con dominio propio |
+| `IMAGEN_API` | Imagen de la API para el compose (por defecto se construye en local). | No |
+
+En el VPS se agregan las de [`despliegue/vps/env.ejemplo`](despliegue/vps/env.ejemplo):
+`COMPOSE_FILE`, `COMPOSE_PROJECT_NAME`, `VPS_ENLACE`, `VPS_PUERTO`, `IMAGEN_BASE` y `RAMA`.
+
+## Despliegue
+
+**Qué lo dispara.** Integrar un pull request a `main`. El flujo
+[`ci-cd.yaml`](.github/workflows/ci-cd.yaml) corre en cadena y cada etapa
+depende de la anterior:
+
+1. **revisar**: contrato, coherencia, pruebas del backend y `shellcheck` de los
+   scripts del VPS.
+2. **compose**: `docker compose up --build --wait` sobre la máquina del CI.
+   Comprueba la salud, la compresión, la caché de la cartelera y que un registro
+   sobreviva a `docker compose restart`. También valida que el compose del VPS
+   solo publique la dirección interna.
+3. **imagen**: publica la imagen en `ghcr.io/elverrianoes-collab/proyecto-tecweb`
+   con las etiquetas `sha-<commit>`, `latest` y, al etiquetar `v0.4.0`, `0.4.0`
+   y `0.4`.
+4. **desplegar**: espera hasta que `GET /salud` de la URL pública informe el
+   commit recién integrado.
+
+En los pull requests corren solo las dos primeras: si fallan, el PR no se
+integra, no hay imagen y nada se despliega.
+
+**A dónde va.** A un VPS compartido con otra aplicación en producción, aislado
+como proyecto `proyecto` ([`docs/despliegue-vps.md`](docs/despliegue-vps.md)).
+En el servidor, un temporizador de systemd ejecuta cada minuto
+[`despliegue/vps/actualizar.sh`](despliegue/vps/actualizar.sh). Si `main` tiene
+un commit nuevo con su imagen publicada, lo despliega con
+`docker compose up --wait` ([`compose.vps.yaml`](compose.vps.yaml)). El proxy del
+servidor pone el HTTPS del subdominio, y el proyecto solo escucha en
+`127.0.0.1`. GitHub no guarda ninguna llave del servidor.
+
+**Cómo se revierte.**
+- **Automático:** si una versión no queda sana, el agente vuelve a la anterior en
+  segundos y no reintenta ese commit.
+- **A mano:** escribir el commit en `/opt/proyecto/.despliegue/fijar-commit`.
+- **Desde GitHub:** *Revert* del pull request; el flujo despliega la reversión.
+
+**Configuración inicial (una sola vez).**
+
+1. Instalar en el VPS con Claude Code, usando el prompt
+   [`despliegue/vps/PROMPT-instalar-proyecto.md`](despliegue/vps/PROMPT-instalar-proyecto.md).
+   Ese prompt pide aprobación antes de cada cambio delicado.
+2. Hacer público el paquete `proyecto-tecweb` (perfil → *Packages* → *Package
+   settings* → *Change visibility*), para que el servidor lo descargue sin
+   credenciales.
+3. En GitHub, *Settings → Secrets and variables → Actions → Variables*: crear
+   `URL_PUBLICA` con `https://<subdominio>`.
+
+**Alternativa: Render.** [`render.yaml`](render.yaml) despliega el mismo
+`Dockerfile` en Render. El CI lo dispara si existe el secreto
+`RENDER_DEPLOY_HOOK`. Ver la última sección de
+[`docs/despliegue-vps.md`](docs/despliegue-vps.md).
+
+## Arquitectura de despliegue
+
+![Arquitectura de despliegue de Apparchar](docs/arquitectura-despliegue.png)
+
+El tráfico entra por un solo servicio: `proxy` en el compose local o, en el VPS,
+el proxy del servidor, que le pasa el subdominio a `proxy` por la dirección
+interna. La API habla con `db` y `cache` por la red interna;
+ninguno de los dos tiene puertos en el host. Las decisiones están en
+[`docs/decisiones.md`](docs/decisiones.md) (D-27 a D-31).
+
+## Estado del proyecto
+
+| Pieza | Estado |
+|---|---|
+| Anteproyecto, prototipo y contrato (Entregas 1 y 2) | ✅ Entregados |
+| MVP del backend: CRUD de cuatro recursos, autenticación, validación y documentación (Entrega 3) | ✅ Entregado |
+| Contenerización, compose, CI/CD, diagrama e informe de rendimiento (Entrega 4) | ✅ En este repositorio |
+| URL pública en el VPS | ⏳ Pendiente de instalar (configuración inicial de [Despliegue](#despliegue)) |
+| Entrega 5: funcionalidades congeladas, auditoría de accesibilidad y seguridad | ⏳ Pendiente |
+
 ## Cómo ejecutarlo
 
-Requisitos: **Git** y **Node.js 20.19 o superior en la línea 20, o 22.12 o
+Sin Docker, para desarrollar. Requisitos: **Git** y **Node.js 20.19 o superior en la línea 20, o 22.12 o
 superior** (con npm 10). Compruébalo con `node --version`. **No hace falta
 instalar PostgreSQL ni Docker**: sin configuración, el backend usa PGlite, el
 mismo PostgreSQL compilado a WebAssembly, y guarda la base en `.datos/pglite`
@@ -217,8 +364,15 @@ apparchar-/
 ├── docs/                      Modelo de datos, decisiones, wireframes, evidencias
 │                              y guion de la demostración (demo-mvp.md)
 ├── scripts/                   Verificador de coherencia y prueba del DDL
+├── proxy/Caddyfile            Proxy de entrada del compose (compresión, HTTPS)
+├── Dockerfile                 Imagen multietapa de la API y la web
+├── compose.yaml               proxy + api + db + cache con un comando
+├── compose.vps.yaml           Ajustes para el VPS compartido (puerto interno, topes, imagen del CI)
+├── despliegue/vps/            Agente de despliegue, respaldos, systemd, plantillas y prompt de instalación
+├── .dockerignore              Lo que no entra a la imagen
+├── render.yaml                Alternativa: blueprint para Render
 ├── .env.example               Variables de entorno (solo nombres)
-└── .github/                   Revisión automática de cada pull request
+└── .github/workflows/         ci-cd.yaml (pruebas, imagen y despliegue) y pages.yml
 ```
 
 ## Prototipo web
@@ -288,7 +442,7 @@ restricciones del DDL (44 comprobaciones).
 
 | Herramienta | Para qué | Alcance |
 |---|---|---|
-| Claude (Anthropic) | Contrato, modelo de datos y prototipo de la Entrega 2; en el MVP, el código del backend, sus pruebas automáticas, la colección de Postman y esta documentación. | Borradores y verificaciones automáticas. Cada integrante revisa, ajusta y sustenta la parte que sube en su pull request. |
+| Claude (Anthropic) | Contrato, modelo de datos y prototipo de la Entrega 2; en el MVP, el código del backend, sus pruebas automáticas, la colección de Postman y esta documentación. En la Entrega 4, el Dockerfile, los compose, el flujo de CI/CD, el agente de despliegue del VPS y su prompt de instalación, el blueprint de Render, la caché con Valkey, el diagrama y las mediciones del informe de rendimiento. | Borradores y verificaciones automáticas. Cada integrante revisa, ajusta y sustenta la parte que sube en su pull request. |
 
 Declaración: los integrantes del equipo «Los insanos» declaran de manera libre y
 transparente que usaron una herramienta de inteligencia artificial generativa
