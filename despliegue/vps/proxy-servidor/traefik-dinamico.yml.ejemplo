@@ -1,0 +1,17 @@
+# Configuración dinámica NUEVA (proveedor «file») para un Traefik que ya existe en el VPS.
+# Usar el entryPoint y el certResolver que el Traefik del servidor ya tiene definidos.
+# Si Traefik corre en un contenedor, 127.0.0.1 no es el servidor: en el .env del
+# proyecto usar VPS_ENLACE=<puerta de enlace de docker0, por ejemplo 172.17.0.1>.
+http:
+  routers:
+    __NOMBRE__:
+      rule: "Host(`__SUBDOMINIO__`)"
+      entryPoints: [__ENTRYPOINT_HTTPS__]
+      service: __NOMBRE__
+      tls:
+        certResolver: __CERT_RESOLVER__
+  services:
+    __NOMBRE__:
+      loadBalancer:
+        servers:
+          - url: "http://__VPS_ENLACE__:__PUERTO__"

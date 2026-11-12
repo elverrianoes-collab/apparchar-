@@ -1,0 +1,14 @@
+# Plantilla: /etc/systemd/system/__NOMBRE__-respaldo.service
+[Unit]
+Description=__NOMBRE__: respaldo de la base de datos (pg_dump)
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+User=__USUARIO__
+Group=__USUARIO__
+SupplementaryGroups=docker
+WorkingDirectory=__DIR__
+ExecStart=/usr/bin/env bash __DIR__/despliegue/vps/respaldar.sh
+Nice=10

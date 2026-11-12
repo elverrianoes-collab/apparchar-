@@ -1,0 +1,17 @@
+# Plantilla. Al instalar se reemplazan __NOMBRE__, __DIR__ y __USUARIO__ y se copia
+# como /etc/systemd/system/__NOMBRE__-despliegue.service (ver docs/despliegue-vps.md).
+[Unit]
+Description=__NOMBRE__: despliegue automático (commit nuevo de main con imagen publicada)
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=__USUARIO__
+Group=__USUARIO__
+SupplementaryGroups=docker
+WorkingDirectory=__DIR__
+ExecStart=/usr/bin/env bash __DIR__/despliegue/vps/actualizar.sh
+TimeoutStartSec=15min
+Nice=10

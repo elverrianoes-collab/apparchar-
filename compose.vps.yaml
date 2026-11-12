@@ -1,0 +1,65 @@
+# Producción en un VPS compartido con otros servicios (decisión D-30).
+# Se usa junto con compose.yaml. En el .env del servidor:
+#   COMPOSE_FILE=compose.yaml:compose.vps.yaml
+#   COMPOSE_PROJECT_NAME=proyecto
+# Qué cambia frente al compose local:
+#   · El proxy escucha solo en una dirección interna del servidor
+#     (VPS_ENLACE:VPS_PUERTO, por defecto 127.0.0.1). El HTTPS del subdominio lo
+#     pone el proxy que ya tiene el VPS: este conjunto no toca los puertos 80 ni 443.
+#   · La API usa la imagen que publicó el CI (IMAGEN_API). No se construye en el servidor.
+#   · El modo es producción y los secretos son obligatorios.
+#   · Cada servicio tiene tope de memoria y de CPU y registros rotados, para no
+#     quitarle recursos ni disco a lo demás que corre en el servidor.
+# Requiere Docker Compose 2.24 o superior (etiquetas !override y !reset).
+
+x-registros: &registros
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  proxy:
+    ports: !override
+      - "${VPS_ENLACE:-127.0.0.1}:${VPS_PUERTO:?Definir VPS_PUERTO en el .env}:80"
+    environment:
+      DOMINIO: ":80"
+    logging: *registros
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 64M
+
+  api:
+    image: ${IMAGEN_API:?Definir IMAGEN_API en el .env}
+    build: !reset null
+    pull_policy: missing
+    environment:
+      NODE_ENV: production
+      JWT_SECRETO: ${JWT_SECRETO:?Definir JWT_SECRETO en el .env}
+      PASARELA_CLAVE: ${PASARELA_CLAVE:?Definir PASARELA_CLAVE en el .env}
+    logging: *registros
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: 384M
+
+  db:
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Definir POSTGRES_PASSWORD en el .env}
+    logging: *registros
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: 384M
+
+  cache:
+    logging: *registros
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 96M
