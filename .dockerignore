@@ -1,0 +1,32 @@
+# Lo que nunca entra al contexto de construcción de la imagen.
+# Dependencias: se instalan dentro de la imagen con npm ci.
+node_modules/
+# Historial y configuración de git y del CI.
+.git/
+.github/
+# Secretos y datos locales: el .env se pasa en tiempo de ejecución, nunca se copia.
+.env
+.env.*
+!.env.example
+.datos/
+# Documentación, colecciones y reportes: no los necesita el contenedor. De docs/
+# solo entra el modelo de datos, que la etapa de pruebas compara con el esquema.
+docs/*
+!docs/modelo-datos.md
+postman/
+reportes/
+coverage/
+*.log
+# Archivos de operación que no van dentro de la imagen.
+compose.yaml
+compose.vps.yaml
+proxy/
+despliegue/
+render.yaml
+Dockerfile
+.dockerignore
+# Sistema operativo y editores.
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
