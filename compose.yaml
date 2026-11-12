@@ -1,0 +1,105 @@
+# Apparchar completo con un comando: docker compose up
+#   proxy  → Caddy, el único servicio publicado (http://localhost:8080)
+#   api    → la API y la web (imagen de este repositorio, Dockerfile)
+#   db     → PostgreSQL 17, con los datos en el volumen datos-postgres
+#   cache  → Valkey 8 (compatible con Redis): cartelera y límite de intentos
+# Sin .env arranca en modo de desarrollo (sin credenciales en el repositorio).
+# Para producción: copiar .env.example a .env y definir NODE_ENV=production,
+# JWT_SECRETO, PASARELA_CLAVE, POSTGRES_PASSWORD y, con dominio propio, DOMINIO.
+# En un VPS compartido se agrega compose.vps.yaml (ver docs/despliegue-vps.md).
+#
+# Sin «name:» a propósito: el proyecto de compose toma el nombre de la carpeta
+# (o de COMPOSE_PROJECT_NAME). Así dos copias en la misma máquina (otro equipo,
+# otro despliegue) nunca comparten contenedores, redes ni volúmenes.
+
+services:
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "${PUERTO_HTTP:-8080}:80"
+      - "${PUERTO_HTTPS:-8443}:443"
+    environment:
+      DOMINIO: ${DOMINIO:-:80}
+    volumes:
+      - ./proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - datos-caddy:/data
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/proxy-salud"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks: [borde, interna]
+
+  api:
+    build:
+      context: .
+      target: ejecucion
+    image: ${IMAGEN_API:-apparchar-api:local}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: "3000"
+      DATABASE_URL: postgres://${POSTGRES_USER:-apparchar}:${POSTGRES_PASSWORD:-apparchar}@db:5432/${POSTGRES_DB:-apparchar}
+      REDIS_URL: redis://cache:6379
+      JWT_SECRETO: ${JWT_SECRETO:-}
+      PASARELA_CLAVE: ${PASARELA_CLAVE:-}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      # Confía en los proxies de redes privadas (Caddy y, en un VPS, el proxy del
+      # servidor): la IP del cliente es la primera dirección pública de X-Forwarded-For.
+      TRUST_PROXY: ${TRUST_PROXY:-loopback,linklocal,uniquelocal}
+    # Sin «ports»: la API solo es alcanzable desde la red interna, a través del proxy.
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/salud"]
+      interval: 10s
+      timeout: 3s
+      start_period: 30s
+      retries: 3
+    networks: [interna]
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-apparchar}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-apparchar}
+      POSTGRES_DB: ${POSTGRES_DB:-apparchar}
+    volumes:
+      - datos-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [interna]
+
+  cache:
+    image: valkey/valkey:8-alpine
+    restart: unless-stopped
+    # Caché pura: sin persistencia en disco y con tope de memoria; si se llena,
+    # descarta las claves menos usadas.
+    command: ["valkey-server", "--save", "", "--appendonly", "no", "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [interna]
+
+volumes:
+  datos-postgres:
+  datos-caddy:
+
+networks:
+  # borde: la que toca el puerto publicado. interna: sin salida al host.
+  borde:
+  interna:
+    internal: true
